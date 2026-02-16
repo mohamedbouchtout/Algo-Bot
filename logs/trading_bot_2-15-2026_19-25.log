@@ -1,0 +1,21 @@
+2026-02-15 19:25:53,043 - INFO - Bot initialized with 412 stocks to monitor
+2026-02-15 19:25:53,047 - INFO - Starting trading bot...
+2026-02-15 19:25:53,048 - INFO - Connecting to 127.0.0.1:9000 with clientId 1...
+2026-02-15 19:25:53,049 - INFO - Connected
+2026-02-15 19:25:53,056 - INFO - Logged on to server version 176
+2026-02-15 19:25:53,057 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm.nj
+2026-02-15 19:25:53,058 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:cashfarm
+2026-02-15 19:25:53,058 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-02-15 19:25:53,061 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:euhmds
+2026-02-15 19:25:53,062 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:fundfarm
+2026-02-15 19:25:53,062 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:ushmds
+2026-02-15 19:25:53,062 - INFO - Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefnj
+2026-02-15 19:25:53,063 - INFO - API connection ready
+2026-02-15 19:25:53,167 - INFO - Synchronization complete
+2026-02-15 19:25:53,167 - INFO - Connected to IB at 127.0.0.1:9000
+2026-02-15 19:25:53,246 - INFO - Market is closed. Next check in 15 minutes...
+2026-02-15 19:40:53,335 - INFO - Market is closed. Next check in 15 minutes...
+2026-02-15 19:43:01,554 - INFO - Bot stopped by user
+2026-02-15 19:43:01,554 - INFO - Disconnecting from 127.0.0.1:9000, 128 B sent in 9 messages, 18.6 kB received in 394 messages, session time 1.03 ks.
+2026-02-15 19:43:01,554 - INFO - Disconnecting
+2026-02-15 19:43:01,554 - INFO - Disconnected from IB
