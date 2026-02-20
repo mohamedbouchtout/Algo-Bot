@@ -15,3 +15,12 @@
 2026-02-20 16:08:04,455 - INFO - Warning 2105, reqId -1: HMDS data farm connection is broken:ushmds
 2026-02-20 16:08:04,455 - INFO - Warning 2157, reqId -1: Sec-def data farm connection is broken:secdefnj
 2026-02-20 16:08:04,455 - INFO - API connection ready
+2026-02-20 16:08:08,458 - ERROR - positions request timed out
+2026-02-20 16:08:08,458 - ERROR - open orders request timed out
+2026-02-20 16:08:08,458 - ERROR - account updates for DUP909326 request timed out
+2026-02-20 16:08:12,466 - INFO - Disconnecting from 127.0.0.1:9000, 117 B sent in 8 messages, 9.40 kB received in 204 messages, session time 8.04 s.
+2026-02-20 16:08:12,466 - INFO - Disconnecting
+2026-02-20 16:08:12,466 - INFO - Disconnected.
+2026-02-20 16:08:12,466 - ERROR - Connection failed: 
+2026-02-20 16:08:12,466 - ERROR - Failed to connect. Exiting.
+2026-02-20 16:08:14,127 - INFO - Successfully pushed: Updated trading bot with new logs
