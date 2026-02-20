@@ -42,7 +42,7 @@ class BreakoutRetestDetector:
         
         return signal
     
-    def _analyze_pattern(self) -> Optional[Dict]:
+    def _analyze_pattern(self, df: pd.DataFrame) -> Optional[Dict]:
         """
         Analyze for breakout and retest pattern
         Pattern:
@@ -50,7 +50,7 @@ class BreakoutRetestDetector:
         2. Price comes back to test 200 MA (retest)
         3. Price bounces off 200 MA in breakout direction
         """
-        DF = self.df.reset_index(drop=True)
+        DF = df.reset_index(drop=True)
         
         # LONG SETUP: Breakout above, retest, bounce up
         long_signal = self._detect_long_pattern(DF)

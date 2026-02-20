@@ -16,3 +16,7 @@
 2026-02-20 12:32:54,479 - INFO - Connected to IB at 127.0.0.1:9000
 2026-02-20 12:32:54,602 - INFO - Market is open. Scanning for signals...
 2026-02-20 12:32:54,602 - INFO - Scanning 412 stocks...
+2026-02-20 12:32:55,513 - ERROR - Bot error: BreakoutRetestDetector._analyze_pattern() takes 1 positional argument but 2 were given
+2026-02-20 12:32:55,513 - INFO - Disconnecting from 127.0.0.1:9000, 261 B sent in 11 messages, 33.8 kB received in 402 messages, session time 1.17 s.
+2026-02-20 12:32:55,513 - INFO - Disconnecting
+2026-02-20 12:32:55,513 - INFO - Disconnected from IB

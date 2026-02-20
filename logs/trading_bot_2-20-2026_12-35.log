@@ -1,0 +1,31 @@
+2026-02-20 12:35:33,933 - INFO - Bot initialized with 412 stocks to monitor
+2026-02-20 12:35:33,941 - INFO - Starting trading bot...
+2026-02-20 12:35:33,941 - INFO - Connecting to 127.0.0.1:9000 with clientId 1...
+2026-02-20 12:35:33,941 - INFO - Connected
+2026-02-20 12:35:33,950 - INFO - Logged on to server version 176
+2026-02-20 12:35:33,950 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm.nj
+2026-02-20 12:35:33,958 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usopt.nj
+2026-02-20 12:35:33,958 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:cashfarm
+2026-02-20 12:35:33,958 - INFO - API connection ready
+2026-02-20 12:35:33,958 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-02-20 12:35:33,958 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:euhmds
+2026-02-20 12:35:33,958 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:fundfarm
+2026-02-20 12:35:33,958 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:ushmds
+2026-02-20 12:35:33,958 - INFO - Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefnj
+2026-02-20 12:35:34,082 - INFO - Synchronization complete
+2026-02-20 12:35:34,082 - INFO - Connected to IB at 127.0.0.1:9000
+2026-02-20 12:35:34,289 - INFO - Market is open. Scanning for signals...
+2026-02-20 12:35:34,289 - INFO - Scanning 412 stocks...
+2026-02-20 12:35:41,217 - INFO - Signal found: SHORT ABNB @ $126.21
+2026-02-20 12:36:06,008 - INFO - Signal found: LONG ALL @ $204.22
+2026-02-20 12:36:21,143 - ERROR - Error 200, reqId 49: No security definition has been found for the request, contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-20 12:36:21,143 - WARNING - Unknown contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-20 12:36:21,376 - ERROR - Error 200, reqId 50: No security definition has been found for the request, contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-20 12:36:27,317 - INFO - Signal found: LONG APD @ $281.10
+2026-02-20 12:36:32,077 - ERROR - Error 200, reqId 61: No security definition has been found for the request, contract: Stock(symbol='ATVI', exchange='SMART', currency='USD')
+2026-02-20 12:36:32,077 - WARNING - Unknown contract: Stock(symbol='ATVI', exchange='SMART', currency='USD')
+2026-02-20 12:36:32,299 - ERROR - Error 200, reqId 62: No security definition has been found for the request, contract: Stock(symbol='ATVI', exchange='SMART', currency='USD')
+2026-02-20 12:36:51,693 - ERROR - Error 200, reqId 81: No security definition has been found for the request, contract: Stock(symbol='BF-B', exchange='SMART', currency='USD')
+2026-02-20 12:36:51,693 - WARNING - Unknown contract: Stock(symbol='BF-B', exchange='SMART', currency='USD')
+2026-02-20 12:36:51,910 - ERROR - Error 200, reqId 82: No security definition has been found for the request, contract: Stock(symbol='BF-B', exchange='SMART', currency='USD')
+2026-02-20 12:37:04,465 - INFO - Signal found: LONG BLK @ $1082.20
