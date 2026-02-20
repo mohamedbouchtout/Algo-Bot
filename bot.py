@@ -320,11 +320,11 @@ class BreakoutTradingBot:
             # Push to remote
             subprocess.run(['git', 'push'], check=True)
             
-            print(f"Successfully pushed: {message}")
+            logging.info(f"Successfully pushed: {message}")
             return True
             
         except subprocess.CalledProcessError as e:
-            print(f"Git error: {e}")
+            logging.error(f"Git error: {e}")
             return False
 
 

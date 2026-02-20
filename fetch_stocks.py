@@ -4,6 +4,10 @@ Improved stock list generator with multiple methods
 
 import pandas as pd
 from io import StringIO
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 def get_hardcoded_stock_list():
     """
@@ -134,38 +138,38 @@ def get_hardcoded_stock_list():
 def save_stock_list(filename='stocks.txt'):
     """Save comprehensive stock list to file"""
     
-    print("Generating stock list...")
+    logging.info("Generating stock list...")
     
     # Use comprehensive hardcoded list
     stocks = get_hardcoded_stock_list()
     
-    print(f"Using {len(stocks)} stocks from curated list")
+    logging.info(f"Using {len(stocks)} stocks from curated list")
     
     # Save to file
     with open(filename, 'w') as f:
         for ticker in stocks:
             f.write(f"{ticker}\n")
     
-    print(f"✅ Saved {len(stocks)} tickers to {filename}")
+    logging.info(f"Saved {len(stocks)} tickers to {filename}")
     
     # Print some stats
-    print(f"\nStock list includes:")
-    print(f"  - Major Tech companies")
-    print(f"  - S&P 500 blue chips")
-    print(f"  - NASDAQ-100 growth stocks")
-    print(f"  - Various sectors: Finance, Healthcare, Energy, Consumer, etc.")
+    logging.info(f"\nStock list includes:")
+    logging.info(f"  - Major Tech companies")
+    logging.info(f"  - S&P 500 blue chips")
+    logging.info(f"  - NASDAQ-100 growth stocks")
+    logging.info(f"  - Various sectors: Finance, Healthcare, Energy, Consumer, etc.")
     
     return stocks
 
 if __name__ == "__main__":
-    print("="*80)
-    print("Stock List Generator")
-    print("="*80)
-    print()
+    logging.info("="*80)
+    logging.info("Stock List Generator")
+    logging.info("="*80)
+    logging.info()
     
     stocks = save_stock_list()
     
-    print(f"\nFirst 20 stocks: {stocks[:20]}")
-    print(f"\n✅ Done! You can now run the trading bot.")
-    print()
-    print("The bot will monitor all these stocks for breakout/retest patterns.")
+    logging.info(f"\nFirst 20 stocks: {stocks[:20]}")
+    logging.info(f"\nDone! You can now run the trading bot.")
+    logging.info()
+    logging.info("The bot will monitor all these stocks for breakout/retest patterns.")

@@ -29,3 +29,11 @@
 2026-02-20 12:36:51,693 - WARNING - Unknown contract: Stock(symbol='BF-B', exchange='SMART', currency='USD')
 2026-02-20 12:36:51,910 - ERROR - Error 200, reqId 82: No security definition has been found for the request, contract: Stock(symbol='BF-B', exchange='SMART', currency='USD')
 2026-02-20 12:37:04,465 - INFO - Signal found: LONG BLK @ $1082.20
+2026-02-20 12:37:18,735 - INFO - Signal found: SHORT CAG @ $18.46
+2026-02-20 12:37:29,028 - INFO - Signal found: SHORT CBRE @ $146.96
+2026-02-20 12:37:33,590 - INFO - Bot stopped by user
+2026-02-20 12:37:33,596 - INFO - Disconnecting from 127.0.0.1:9000, 8.07 kB sent in 130 messages, 902 kB received in 576 messages, session time 120 s.
+2026-02-20 12:37:33,596 - INFO - Disconnecting
+2026-02-20 12:37:33,596 - INFO - Disconnected from IB
+2026-02-20 12:37:36,613 - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-129' coro=<IB.qualifyContractsAsync() running at C:\Users\moham\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\ib_insync\ib.py:1798> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()]>>

@@ -1,0 +1,25 @@
+2026-02-20 16:03:20,828 - INFO - Bot initialized with 412 stocks to monitor
+2026-02-20 16:03:20,828 - INFO - Generating stock list...
+2026-02-20 16:03:20,828 - INFO - Using 412 stocks from curated list
+2026-02-20 16:03:20,828 - INFO - Saved 412 tickers to stocks.txt
+2026-02-20 16:03:20,828 - INFO - 
+Stock list includes:
+2026-02-20 16:03:20,828 - INFO -   - Major Tech companies
+2026-02-20 16:03:20,828 - INFO -   - S&P 500 blue chips
+2026-02-20 16:03:20,828 - INFO -   - NASDAQ-100 growth stocks
+2026-02-20 16:03:20,828 - INFO -   - Various sectors: Finance, Healthcare, Energy, Consumer, etc.
+2026-02-20 16:03:20,828 - INFO - Starting trading bot...
+2026-02-20 16:03:20,828 - INFO - Connecting to 127.0.0.1:9000 with clientId 1...
+2026-02-20 16:03:20,828 - INFO - Connected
+2026-02-20 16:03:20,844 - INFO - Logged on to server version 176
+2026-02-20 16:03:20,844 - INFO - Warning 2110, reqId -1: Connectivity between Trader Workstation and server is broken. It will be restored automatically.
+2026-02-20 16:03:20,844 - INFO - Warning 2103, reqId -1: Market data farm connection is broken:usfarm.nj
+2026-02-20 16:03:20,851 - INFO - Warning 2103, reqId -1: Market data farm connection is broken:usopt.nj
+2026-02-20 16:03:20,851 - INFO - Warning 2103, reqId -1: Market data farm connection is broken:cashfarm
+2026-02-20 16:03:20,853 - INFO - Warning 2103, reqId -1: Market data farm connection is broken:usfarm
+2026-02-20 16:03:20,853 - INFO - Warning 2105, reqId -1: HMDS data farm connection is broken:euhmds
+2026-02-20 16:03:20,853 - INFO - Warning 2105, reqId -1: HMDS data farm connection is broken:fundfarm
+2026-02-20 16:03:20,853 - INFO - Warning 2105, reqId -1: HMDS data farm connection is broken:ushmds
+2026-02-20 16:03:20,853 - INFO - Warning 2157, reqId -1: Sec-def data farm connection is broken:secdefnj
+2026-02-20 16:03:20,853 - INFO - API connection ready
+2026-02-20 16:03:21,183 - INFO - Warning 2108, reqId -1: Market data farm connection is inactive but should be available upon demand.usopt.nj
