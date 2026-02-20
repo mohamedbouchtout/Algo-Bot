@@ -152,24 +152,4 @@ def save_stock_list(filename='stocks.txt'):
     
     logging.info(f"Saved {len(stocks)} tickers to {filename}")
     
-    # Print some stats
-    logging.info(f"\nStock list includes:")
-    logging.info(f"  - Major Tech companies")
-    logging.info(f"  - S&P 500 blue chips")
-    logging.info(f"  - NASDAQ-100 growth stocks")
-    logging.info(f"  - Various sectors: Finance, Healthcare, Energy, Consumer, etc.")
-    
     return stocks
-
-if __name__ == "__main__":
-    logging.info("="*80)
-    logging.info("Stock List Generator")
-    logging.info("="*80)
-    logging.info()
-    
-    stocks = save_stock_list()
-    
-    logging.info(f"\nFirst 20 stocks: {stocks[:20]}")
-    logging.info(f"\nDone! You can now run the trading bot.")
-    logging.info()
-    logging.info("The bot will monitor all these stocks for breakout/retest patterns.")

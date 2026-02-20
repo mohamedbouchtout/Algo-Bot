@@ -23,3 +23,12 @@ Stock list includes:
 2026-02-20 16:03:20,853 - INFO - Warning 2157, reqId -1: Sec-def data farm connection is broken:secdefnj
 2026-02-20 16:03:20,853 - INFO - API connection ready
 2026-02-20 16:03:21,183 - INFO - Warning 2108, reqId -1: Market data farm connection is inactive but should be available upon demand.usopt.nj
+2026-02-20 16:03:24,862 - ERROR - positions request timed out
+2026-02-20 16:03:24,862 - ERROR - open orders request timed out
+2026-02-20 16:03:24,862 - ERROR - account updates for DUP909326 request timed out
+2026-02-20 16:03:28,875 - INFO - Disconnecting from 127.0.0.1:9000, 117 B sent in 8 messages, 9.57 kB received in 206 messages, session time 8.05 s.
+2026-02-20 16:03:28,875 - INFO - Disconnecting
+2026-02-20 16:03:28,875 - INFO - Disconnected.
+2026-02-20 16:03:28,875 - ERROR - Connection failed: 
+2026-02-20 16:03:28,875 - ERROR - Failed to connect. Exiting.
+2026-02-20 16:03:30,937 - INFO - Successfully pushed: Updated trading bot with new logs
