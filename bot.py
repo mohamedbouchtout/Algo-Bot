@@ -336,6 +336,6 @@ if __name__ == "__main__":
         client_id=1
     )
 
-    bot.git_commit_and_push("Updated trading bot with new signals")
     fs.save_stock_list()
     bot.run()
+    bot.git_commit_and_push("Updated trading bot with new logs")
