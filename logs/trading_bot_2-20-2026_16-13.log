@@ -16,3 +16,8 @@
 2026-02-20 16:13:43,168 - INFO - Synchronization complete
 2026-02-20 16:13:43,168 - INFO - Connected to IB at 127.0.0.1:9000
 2026-02-20 16:13:43,395 - INFO - Market is closed. Next check in 15 minutes...
+2026-02-20 16:13:58,372 - INFO - Bot stopped by user
+2026-02-20 16:13:58,372 - INFO - Disconnecting from 127.0.0.1:9000, 128 B sent in 9 messages, 18.8 kB received in 397 messages, session time 15.9 s.
+2026-02-20 16:13:58,372 - INFO - Disconnecting
+2026-02-20 16:13:58,372 - INFO - Disconnected from IB
+2026-02-20 16:14:00,488 - INFO - Successfully pushed: Updated trading bot with new logs

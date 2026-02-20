@@ -46,10 +46,10 @@ pip install ib_insync pandas numpy requests beautifulsoup4
 To monitor the full S&P 500 and NASDAQ-100:
 
 ```bash
-python fetch_stock_list.py
+fetch_stock_list.py
 ```
 
-This creates `stocks.txt` with all tickers. The bot will automatically use this if available.
+This files `stocks.txt` with all tickers. The bot will automatically run and use this.
 
 ## Usage
 
@@ -58,12 +58,12 @@ This creates `stocks.txt` with all tickers. The bot will automatically use this 
 Make sure TWS/IB Gateway is running and logged in, then:
 
 ```bash
-python breakout_trading_bot.py
+python bot.py
 ```
 
 The bot will:
 - ✅ Run continuously 24/7
-- ✅ Only trade during market hours (9:30 AM - 4:00 PM EST)
+- ✅ Only trade during non-holiday market hours (9:30 AM - 4:00 PM EST)
 - ✅ Scan all stocks every 5 minutes
 - ✅ Automatically enter positions when signals are found
 - ✅ Use bracket orders (entry + stop loss + take profit)
@@ -73,7 +73,7 @@ The bot will:
 
 The bot logs all activity to:
 - **Console**: Real-time updates
-- **trading_bot.log**: Full log file
+- **trading_bot_<date>.log**: Full log file
 
 Example log output:
 ```
@@ -84,7 +84,7 @@ Example log output:
 
 ## Configuration
 
-Edit `breakout_trading_bot.py` to customize:
+Edit `bot.py` to customize:
 
 ```python
 # Trading parameters
@@ -174,10 +174,11 @@ Before running with real money:
 
 ## Files
 
-- `breakout_trading_bot.py` - Main bot script
+- `bot.py` - Main bot script
+- `_200ma_retest_detection.py` - Helper that does the 200 MA analysis
 - `fetch_stock_list.py` - Helper to get S&P 500/NASDAQ tickers
 - `stocks.txt` - Full list of stocks to monitor (generated)
-- `trading_bot.log` - Activity log
+- `trading_bot_<date>.log` - Activity log
 - `README.md` - This file
 
 ## Example Workflow
@@ -206,7 +207,7 @@ Before running with real money:
 ## Support
 
 For issues:
-1. Check `trading_bot.log` for errors
+1. Check `trading_bot_<date>.log` for errors
 2. Verify TWS is running and API enabled
 3. Ensure markets are open (for live data)
 4. Review IB API documentation: https://interactivebrokers.github.io/

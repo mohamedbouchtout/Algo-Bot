@@ -1,0 +1,17 @@
+2026-02-20 16:23:27,793 - INFO - Generating stock list...
+2026-02-20 16:23:27,793 - INFO - Using 412 stocks from curated list
+2026-02-20 16:23:27,793 - INFO - Saved 412 tickers to stocks.txt
+2026-02-20 16:23:27,793 - INFO - Starting trading bot...
+2026-02-20 16:23:27,793 - INFO - Connecting to 127.0.0.1:9000 with clientId 1...
+2026-02-20 16:23:27,793 - INFO - Connected
+2026-02-20 16:23:27,817 - INFO - Logged on to server version 176
+2026-02-20 16:23:27,825 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm.nj
+2026-02-20 16:23:27,825 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usopt.nj
+2026-02-20 16:23:27,825 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:cashfarm
+2026-02-20 16:23:27,825 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-02-20 16:23:27,825 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:ushmds
+2026-02-20 16:23:27,825 - INFO - Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefnj
+2026-02-20 16:23:27,825 - INFO - API connection ready
+2026-02-20 16:23:27,966 - INFO - Synchronization complete
+2026-02-20 16:23:27,966 - INFO - Connected to IB at 127.0.0.1:9000
+2026-02-20 16:23:28,167 - INFO - Market is closed. Next check in 15 minutes...

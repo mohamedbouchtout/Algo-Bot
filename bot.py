@@ -49,8 +49,6 @@ class BreakoutTradingBot:
         
         # Stock universe (S&P 500 + NASDAQ 100 major stocks)
         self.stock_universe = self._get_stock_universe()
-        
-        logging.info(f"Bot initialized with {len(self.stock_universe)} stocks to monitor")
     
     def _get_stock_universe(self) -> List[str]:
         """
