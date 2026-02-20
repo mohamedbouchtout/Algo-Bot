@@ -214,7 +214,7 @@ class BreakoutTradingBot:
             
             # Detect 200 MA pattern
             MA200 = _200ma.BreakoutRetestDetector(df, self.risk_reward_ratio)
-            signal = MA200.detect_breakout_and_retest(df)
+            signal = MA200.detect_breakout_and_retest()
             
             if signal:
                 signals_found.append(signal)
