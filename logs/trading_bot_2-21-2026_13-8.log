@@ -1,0 +1,19 @@
+2026-02-21 13:08:16,697 - INFO - Connecting to 127.0.0.1:9000 with clientId 1...
+2026-02-21 13:08:16,698 - INFO - Connected
+2026-02-21 13:08:16,703 - INFO - Logged on to server version 176
+2026-02-21 13:08:16,705 - INFO - API connection ready
+2026-02-21 13:08:16,705 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm.nj
+2026-02-21 13:08:16,705 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:cashfarm
+2026-02-21 13:08:16,706 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-02-21 13:08:16,706 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:euhmds
+2026-02-21 13:08:16,706 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:fundfarm
+2026-02-21 13:08:16,706 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:ushmds
+2026-02-21 13:08:16,706 - INFO - Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefnj
+2026-02-21 13:08:17,011 - INFO - Synchronization complete
+2026-02-21 13:08:17,012 - INFO - Connected to IB at 127.0.0.1:9000
+2026-02-21 13:08:21,477 - ERROR - Error 200, reqId 49: No security definition has been found for the request, contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-21 13:08:21,478 - WARNING - Unknown contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-21 13:08:21,508 - ERROR - Error 200, reqId 50: No security definition has been found for the request, contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-21 13:08:21,509 - ERROR - Error during scanning: 'NoneType' object has no attribute 'copy'
+2026-02-21 13:08:21,535 - INFO - Disconnecting from 127.0.0.1:9000, 3.30 kB sent in 57 messages, 378 kB received in 469 messages, session time 4.86 s.
+2026-02-21 13:08:21,535 - INFO - Disconnecting

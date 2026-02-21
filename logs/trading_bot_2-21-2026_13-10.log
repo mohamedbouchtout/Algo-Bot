@@ -1,0 +1,18 @@
+2026-02-21 13:10:27,300 - INFO - Connecting to 127.0.0.1:9000 with clientId 1...
+2026-02-21 13:10:27,301 - INFO - Connected
+2026-02-21 13:10:27,304 - INFO - Logged on to server version 176
+2026-02-21 13:10:27,306 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm.nj
+2026-02-21 13:10:27,306 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:cashfarm
+2026-02-21 13:10:27,306 - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-02-21 13:10:27,306 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:euhmds
+2026-02-21 13:10:27,308 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:fundfarm
+2026-02-21 13:10:27,309 - INFO - Warning 2106, reqId -1: HMDS data farm connection is OK:ushmds
+2026-02-21 13:10:27,309 - INFO - Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefnj
+2026-02-21 13:10:27,309 - INFO - API connection ready
+2026-02-21 13:10:27,417 - INFO - Synchronization complete
+2026-02-21 13:10:27,417 - INFO - Connected to IB at 127.0.0.1:9000
+2026-02-21 13:10:29,761 - ERROR - Error 200, reqId 49: No security definition has been found for the request, contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-21 13:10:29,761 - WARNING - Unknown contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-21 13:10:29,781 - ERROR - Error 200, reqId 50: No security definition has been found for the request, contract: Stock(symbol='ANSS', exchange='SMART', currency='USD')
+2026-02-21 13:10:29,810 - INFO - Disconnecting from 127.0.0.1:9000, 3.30 kB sent in 57 messages, 378 kB received in 469 messages, session time 2.51 s.
+2026-02-21 13:10:29,810 - INFO - Disconnecting

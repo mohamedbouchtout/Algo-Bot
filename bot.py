@@ -144,27 +144,6 @@ class BreakoutTradingBot:
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
             
-            # Create bracket order (entry + stop loss + take profit)
-            if signal['type'] == 'LONG':
-                # Market order to enter long
-                parent_order = MarketOrder('BUY', shares)
-                
-                # Stop loss
-                stop_loss_order = StopOrder('SELL', shares, signal['stop'])
-                
-                # Take profit
-                take_profit_order = LimitOrder('SELL', shares, signal['target'])
-                
-            else:  # SHORT
-                # Market order to enter short
-                parent_order = MarketOrder('SELL', shares)
-                
-                # Stop loss (buy back at higher price)
-                stop_loss_order = StopOrder('BUY', shares, signal['stop'])
-                
-                # Take profit (buy back at lower price)
-                take_profit_order = LimitOrder('BUY', shares, signal['target'])
-            
             # Create bracket order
             bracket = self.ib.bracketOrder(
                 action='BUY' if signal['type'] == 'LONG' else 'SELL',
@@ -216,7 +195,9 @@ class BreakoutTradingBot:
             
             if signal:
                 signals_found.append(signal)
-                logging.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}")
+                logging.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}, "
+                        f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
+                        f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
             
             # Small delay to avoid rate limiting
             time_module.sleep(0.5)

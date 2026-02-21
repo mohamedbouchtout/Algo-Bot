@@ -73,7 +73,7 @@ The bot will:
 
 The bot logs all activity to:
 - **Console**: Real-time updates
-- **trading_bot_<date>.log**: Full log file
+- **trading_bot_<month>-<day>-<year>_<hour>-<minute>.log**: Full log file
 
 Example log output:
 ```
@@ -137,7 +137,7 @@ The bot looks for breakouts in the last 20 days. It requires:
 **Cloud Server (Recommended):**
 ```bash
 # On AWS/DigitalOcean VPS
-nohup python breakout_trading_bot.py > bot.log 2>&1 &
+nohup python bot.py > bot.log 2>&1 &
 ```
 
 This keeps the bot running even if you disconnect.
@@ -178,14 +178,14 @@ Before running with real money:
 - `_200ma_retest_detection.py` - Helper that does the 200 MA analysis
 - `fetch_stock_list.py` - Helper to get S&P 500/NASDAQ tickers
 - `stocks.txt` - Full list of stocks to monitor (generated)
-- `trading_bot_<date>.log` - Activity log
+- `trading_bot_<month>-<day>-<year>_<hour>-<minute>.log` - Activity log
 - `README.md` - This file
 
 ## Example Workflow
 
 **Monday 9:00 AM:**
 1. Start TWS, log into paper trading
-2. Run: `python breakout_trading_bot.py`
+2. Run: `python bot.py`
 3. Bot waits until 9:30 AM market open
 
 **Monday 9:30 AM:**
@@ -207,7 +207,7 @@ Before running with real money:
 ## Support
 
 For issues:
-1. Check `trading_bot_<date>.log` for errors
+1. Check `trading_bot_<month>-<day>-<year>_<hour>-<minute>.log` for errors
 2. Verify TWS is running and API enabled
 3. Ensure markets are open (for live data)
 4. Review IB API documentation: https://interactivebrokers.github.io/
