@@ -111,7 +111,7 @@ class BreakoutRetestDetector:
                     
                     # Retest should have LOWER volume than breakout (weak selling pressure)
                     # Ideally below average volume (< 1.0x) or at least less than breakout
-                    if retest_volume_ratio > volume_ratio * 0.8:
+                    if retest_volume_ratio > volume_ratio * 0.8 or retest_volume_ratio > 1.0:
                         logging.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakout {volume_ratio:.2f}x")
                         continue
 
@@ -194,7 +194,7 @@ class BreakoutRetestDetector:
                     retest_volume_ratio = retest_volume / avg_volume
                     
                     # Retest should have LOWER volume than breakdown (weak buying pressure)
-                    if retest_volume_ratio > volume_ratio * 0.8:
+                    if retest_volume_ratio > volume_ratio * 0.8 or retest_volume_ratio > 1.0:
                         logging.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakdown {volume_ratio:.2f}x")
                         continue
 

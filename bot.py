@@ -276,6 +276,8 @@ class BreakoutTradingBot:
                     # Market closed - wait 15 minutes and check again
                     logging.info(f"Market is closed. Next check in 15 minutes...")
                     time_module.sleep(900)  # 15 minutes
+
+                self.git_commit_and_push("Auto-commit: Updated trading bot with new logs")
                     
         except KeyboardInterrupt:
             logging.info("Bot stopped by user")
@@ -305,7 +307,6 @@ class BreakoutTradingBot:
         except subprocess.CalledProcessError as e:
             logging.error(f"Git error: {e}")
             return False
-
 
 if __name__ == "__main__":
     # Create and run the bot
