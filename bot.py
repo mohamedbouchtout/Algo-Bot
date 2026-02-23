@@ -317,4 +317,4 @@ if __name__ == "__main__":
 
     fs.save_stock_list()
     bot.run()
-    bot.git_commit_and_push("Updated trading bot with new logs")
+    bot.git_commit_and_push("Auto-commit: Updated trading bot with new logs")
