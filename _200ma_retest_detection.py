@@ -101,17 +101,17 @@ class BreakoutRetestDetector:
             
             # Step 2: Look for retest in next few days
             for j in range(i+1, min(i+10, len(DF))):
-                # Price came back down near MA200 (within 2%)
+                # Price came back down near MA200 (within 1%)
                 retest_distance = abs(low[j] - ma200[j]) / ma200[j]
                 
-                if retest_distance < 0.015:  # Within 1.5% of MA200
+                if retest_distance < 0.01:  # Within 1.0% of MA200
                     # Check if retest has LOW volume (weak selling)
                     retest_volume = volume[j]
                     retest_volume_ratio = retest_volume / avg_volume
                     
                     # Retest should have LOWER volume than breakout (weak selling pressure)
                     # Ideally below average volume (< 1.0x) or at least less than breakout
-                    if retest_volume_ratio > volume_ratio * 0.8 or retest_volume_ratio > 1.0:
+                    if retest_volume_ratio > volume_ratio * 0.7 or retest_volume_ratio > 1.0:
                         logging.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakout {volume_ratio:.2f}x")
                         continue
 
@@ -185,16 +185,16 @@ class BreakoutRetestDetector:
             
             # Step 2: Look for retest in next few days
             for j in range(i+1, min(i+10, len(DF))):
-                # Price came back up near MA200 (within 2%)
+                # Price came back up near MA200 (within 1%)
                 retest_distance = abs(high[j] - ma200[j]) / ma200[j]
                 
-                if retest_distance < 0.015:  # Within 1.5% of MA200
+                if retest_distance < 0.01:  # Within 1.0% of MA200
                     # Check if retest has LOW volume (weak buying)
                     retest_volume = volume[j]
                     retest_volume_ratio = retest_volume / avg_volume
                     
                     # Retest should have LOWER volume than breakdown (weak buying pressure)
-                    if retest_volume_ratio > volume_ratio * 0.8 or retest_volume_ratio > 1.0:
+                    if retest_volume_ratio > volume_ratio * 0.7 or retest_volume_ratio > 1.0:
                         logging.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakdown {volume_ratio:.2f}x")
                         continue
 
@@ -212,7 +212,7 @@ class BreakoutRetestDetector:
                                 continue
                             
                             target_price = entry_price - (risk * self.risk_reward_ratio)
-                            
+
                             return {
                                 'type': 'SHORT',
                                 'symbol': DF['symbol'].iloc[0],

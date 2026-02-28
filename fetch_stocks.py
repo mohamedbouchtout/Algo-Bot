@@ -70,25 +70,25 @@ def get_nasdaq100_tickers():
         logging.error(f"Failed to fetch NASDAQ: {e}")
         return []
 
-def get_stock_list():
+def get_stock_list(sp500=True, nasdaq=True):
     """Fetch S&P 500 and NASDAQ-100 tickers"""
     
-    sp500 = get_sp500_tickers()
-    nasdaq100 = get_nasdaq100_tickers()
+    SP500 = get_sp500_tickers() if sp500 else []
+    NASDAQ = get_nasdaq100_tickers() if nasdaq else []
     
     # Combine and deduplicate
-    combined = sorted(list(set(sp500 + nasdaq100)))
+    combined = sorted(list(set(SP500 + NASDAQ)))
     logging.info(f"Total unique tickers: {len(combined)}")
 
     return combined
 
-def save_stock_list(filename='stocks.txt'):
+def save_stock_list(sp500=True, nasdaq=True, filename='stocks.txt'):
     """Save comprehensive stock list to file"""
     
     logging.info("Generating stock list...")
     
     # Use comprehensive hardcoded list
-    stocks = get_stock_list()
+    stocks = get_stock_list(sp500, nasdaq)
     
     logging.info(f"Using {len(stocks)} stocks from curated list")
     

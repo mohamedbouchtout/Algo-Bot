@@ -1508,3 +1508,8 @@
 2026-02-23 11:57:52,052 - INFO - Active position: BLK, Qty: -406.0
 2026-02-23 11:57:52,056 - INFO - Active position: AGNCN, Qty: 200.0
 2026-02-23 11:57:52,056 - INFO - Waiting 300 seconds until next scan...
+2026-02-23 11:58:30,940 - INFO - Bot stopped by user
+2026-02-23 11:58:30,942 - INFO - Disconnecting from 127.0.0.1:9000, 200 kB sent in 2804 messages, 20.9 MB received in 18159 messages, session time 1.30 ks.
+2026-02-23 11:58:30,943 - INFO - Disconnecting
+2026-02-23 11:58:30,944 - INFO - Disconnected from IB
+2026-02-23 11:58:33,521 - INFO - Successfully pushed: Auto-commit: Updated trading bot with new logs
