@@ -3,6 +3,7 @@ Improved stock list generator with multiple methods
 """
 
 import logging
+import os
 import requests
 import json
 
@@ -93,7 +94,8 @@ def save_stock_list(sp500=True, nasdaq=True, filename='stocks.txt'):
     logging.info(f"Using {len(stocks)} stocks from curated list")
     
     # Save to file
-    with open(filename, 'w') as f:
+    file_path = os.path.join(os.path.dirname(__file__), filename)
+    with open(file_path, 'w') as f:
         for ticker in stocks:
             f.write(f"{ticker}\n")
     
