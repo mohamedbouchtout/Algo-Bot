@@ -546,7 +546,7 @@ class BreakoutTradingBot:
             self.git_commit_and_push("Auto-commit: Trading bot update")
             last_git_commit = datetime.now()
         
-        # Check for updates only once per day
+        # Check for updates only once per day and after market close
         if datetime.now().hour == 16 and datetime.now().minute < 20:  # After market close
             if self.check_for_updates():
                 logging.info("Updating and restarting bot to apply new changes...")
