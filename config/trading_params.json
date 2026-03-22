@@ -1,0 +1,25 @@
+{
+    "strategy_retest_200ma": {
+        "ma_period": 200,
+        "ma_slope_period": 20,
+        "min_uptrend_slope": -0.01,
+        "max_downtrend_slope": 0.01,
+        "risk_reward_ratio": 2.0,
+        "lookback_days": 250,
+        "min_breakout_volume": 2.0,
+        "min_bounce_strength": 0.02,
+        "max_retest_volume_ratio": 0.5,
+        "max_retest_volume_absolute": 0.8,
+        "max_days_since_retest": 3,
+        "retest_distance": 0.005
+    },
+    "risk_management": {
+        "risk_per_trade_pct": 0.01,
+        "max_investment_pct": 0.70,
+        "max_positions": 10
+    },
+    "timing": {
+        "scan_interval": 1200,
+        "market_check_interval": 900
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "ib": {
+        "host": "127.0.0.1",
+        "port": 9000,
+        "client_id": 1
+    },
+    "logging": {
+        "level": "DEBUG",
+        "console": true
+    },
+    "git": {
+        "enabled": true,
+        "branch": "bot/nonproduction",
+        "main_branch": "main",
+        "commit_interval": 3600,
+        "update_check_interval": 21600
+    }
+}

@@ -1,203 +1,343 @@
-# Breakout & Retest Trading Bot
+# Algo-Bot: Automated Breakout & Retest Trading System
 
-Automated trading bot that scans S&P 500 and NASDAQ stocks for 200-day moving average breakout and retest patterns.
+A sophisticated automated trading bot that scans S&P 500 and NASDAQ stocks for 200-day moving average breakout and retest patterns. Built with a modular architecture for reliability and maintainability.
 
-## Strategy Overview
+## 🚀 Features
 
-The bot looks for this pattern:
-1. **Breakout**: Stock price crosses above/below the 200-day moving average
-2. **Retest**: Price comes back to test the 200 MA
-3. **Bounce**: Price bounces off the MA in the breakout direction
-4. **Entry**: Enter position with 2:1 risk/reward ratio
+- **Automated Pattern Detection**: Scans for 200 MA breakout and retest patterns
+- **Dual Strategy Support**: Long and short positions based on trend direction
+- **Risk Management**: Position sizing, stop losses, take profit targets
+- **Bracket Orders**: Automatic entry, stop loss, and take profit orders
+- **Market Hours Detection**: Only trades during NYSE market hours
+- **Git Integration**: Auto-updates from repository during off-hours
+- **Environment Configuration**: Dev/Prod configs based on Git branch
+- **Comprehensive Logging**: Detailed logs with timestamps
+- **Paper Trading Ready**: Configured for IBKR paper trading
+
+## 📁 Project Structure
+
+```
+Algo-Bot/
+├── main.py                 # Application entry point
+├── config/
+│   ├── dev.json           # Development configuration
+│   ├── prod.json          # Production configuration
+│   └── trading_params.json # Trading strategy parameters
+├── core/
+│   ├── bot.py            # Main TradingBot orchestrator
+│   ├── connection.py     # IBKR connection management
+│   └── scheduler.py      # Market hours scheduling
+├── data_fetch/
+│   ├── stock_fetcher.py  # Stock list management
+│   ├── historical_data.py # Historical price data
+│   └── persistence.py    # Data persistence utilities
+├── execution/
+│   ├── order_manager.py  # Order placement and management
+│   ├── position_manager.py # Position tracking
+│   └── risk_manager.py   # Risk calculation and validation
+├── strategy/
+│   └── retest_200ma/
+│       ├── indicators.py  # Technical indicators
+│       ├── trend_detector.py # Pattern detection logic
+│       └── validators.py  # Trend validation
+├── utils/
+│   ├── alerts.py         # Alert system
+│   ├── git_manager.py    # Git operations
+│   ├── logger.py         # Logging utilities
+│   └── metrics.py        # Performance metrics
+├── tests/                # Unit tests
+├── data/                 # Runtime data storage
+│   ├── logs/            # Log files
+│   └── performance/     # Performance data
+└── requirements.txt      # Python dependencies
+```
+
+## 📈 Strategy Overview
+
+The bot implements a 200-day moving average breakout and retest strategy:
 
 ### Long Setup
-- Price breaks **above** 200 MA
-- Price retests 200 MA from above
-- Price bounces up
-- Enter long with stop below retest low
+1. **Breakout**: Price crosses above 200 MA with high volume
+2. **Retest**: Price returns to test 200 MA from above
+3. **Bounce**: Price bounces upward off the MA
+4. **Entry**: Long position with 2:1 risk/reward ratio
 
 ### Short Setup
-- Price breaks **below** 200 MA
-- Price retests 200 MA from below  
-- Price bounces down
-- Enter short with stop above retest high
+1. **Breakdown**: Price crosses below 200 MA with high volume
+2. **Retest**: Price returns to test 200 MA from below
+3. **Bounce**: Price bounces downward off the MA
+4. **Entry**: Short position with 2:1 risk/reward ratio
 
-## Installation
+### Key Parameters
+- **MA Period**: 200 days
+- **Lookback**: 250 trading days of historical data
+- **Risk/Reward**: 2:1 minimum
+- **Volume Filter**: Breakout must be 2x average volume
+- **Retest Distance**: Within 0.5% of MA
+- **Max Days Since Retest**: 3 days
 
-### 1. Install Required Packages
+## 🛠️ Installation
 
+### Prerequisites
+- Python 3.8+
+- Interactive Brokers account (paper trading recommended)
+- TWS or IB Gateway installed
+
+### 1. Clone Repository
 ```bash
-pip install ib_insync pandas numpy requests beautifulsoup4
+git clone https://github.com/mohamedbouchtout/Algo-Bot.git
+cd Algo-Bot
 ```
 
-### 2. Set Up Interactive Brokers
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-1. Download and install TWS or IB Gateway
-2. Open paper trading account at interactivebrokers.com
-3. Enable API in TWS:
+### 3. Set Up Interactive Brokers
+
+1. **Download TWS or IB Gateway**
+   - Visit interactivebrokers.com
+   - Download Trader Workstation (TWS) or IB Gateway
+
+2. **Configure API Access**
+   - Launch TWS/IB Gateway
    - File → Global Configuration → API → Settings
    - ✅ Enable ActiveX and Socket Clients
-   - Socket port: 7497 (paper trading)
+   - Socket port: 9000 (paper trading)
    - ✅ Allow connections from localhost only
-4. Restart TWS
+   - ✅ Read-only API (for safety)
 
-### 3. Get Stock List (Optional)
+3. **Paper Trading Account**
+   - Create paper trading account at IBKR
+   - Fund with virtual currency
+   - Use paper trading credentials
 
-To monitor the full S&P 500 and NASDAQ-100:
+## ⚙️ Configuration
 
-```bash
-fetch_stock_list.py
+The bot uses JSON configuration files in the `config/` directory:
+
+### Environment Selection
+- **Development**: `config/dev.json` (when on non-production branches)
+- **Production**: `config/prod.json` (when on `bot/production` branch)
+
+### Trading Parameters (`config/trading_params.json`)
+```json
+{
+  "strategy_retest_200ma": {
+    "ma_period": 200,
+    "risk_reward_ratio": 2.0,
+    "lookback_days": 250,
+    "min_breakout_volume": 2.0,
+    "retest_distance": 0.005
+  },
+  "risk_management": {
+    "risk_per_trade_pct": 0.01,
+    "max_investment_pct": 0.70,
+    "max_positions": 10
+  },
+  "timing": {
+    "scan_interval": 1200,
+    "market_check_interval": 900
+  }
+}
 ```
 
-This files `stocks.txt` with all tickers. The bot will automatically run and use this.
+### IBKR Configuration
+```json
+{
+  "ib": {
+    "host": "127.0.0.1",
+    "port": 9000,
+    "client_id": 1
+  }
+}
+```
 
-## Usage
+## 🚀 Usage
 
 ### Start the Bot
-
-Make sure TWS/IB Gateway is running and logged in, then:
-
 ```bash
-python bot.py
+python main.py
 ```
 
-The bot will:
-- ✅ Run continuously 24/7
-- ✅ Only trade during non-holiday market hours (9:30 AM - 4:00 PM EST)
-- ✅ Scan all stocks every 5 minutes
-- ✅ Automatically enter positions when signals are found
-- ✅ Use bracket orders (entry + stop loss + take profit)
-- ✅ Risk 1% of account per trade
+### What the Bot Does
+- ✅ Connects to IBKR TWS/Gateway
+- ✅ Loads stock list (S&P 500 + NASDAQ-100)
+- ✅ Runs continuously during market hours
+- ✅ Scans stocks every 20 minutes for signals
+- ✅ Places bracket orders when patterns detected
+- ✅ Monitors existing positions
+- ✅ Auto-commits changes to Git
+- ✅ Logs all activity
 
-### Monitor the Bot
-
-The bot logs all activity to:
-- **Console**: Real-time updates
-- **trading_bot_<month>-<day>-<year>_<hour>-<minute>.log**: Full log file
+### Monitor Activity
+The bot creates timestamped log files in `data/logs/`:
+```
+data/logs/trading_bot_3-22-2026_14-30.log
+```
 
 Example log output:
 ```
-2024-02-14 10:30:00 - INFO - Scanning 550 stocks...
-2024-02-14 10:32:15 - INFO - Signal found: LONG AAPL @ $225.50
-2024-02-14 10:32:16 - INFO - Entered LONG position in AAPL: 40 shares @ $225.50, Stop: $223.00, Target: $230.50
+2026-03-22 14:30:00 - INFO - Starting trading bot...
+2026-03-22 14:30:01 - INFO - Connected to IB at 127.0.0.1:9000
+2026-03-22 14:30:02 - INFO - Scanning 650 stocks...
+2026-03-22 14:32:15 - INFO - Signal found: LONG AAPL @ $225.50
+2026-03-22 14:32:16 - INFO - Entered position: AAPL LONG, 40 shares @ $225.50
 ```
 
-## Configuration
+## 🛡️ Risk Management
 
-Edit `bot.py` to customize:
+### Built-in Safeguards
+- ✅ **Position Sizing**: 1% account risk per trade
+- ✅ **Max Investment**: 70% of account can be invested
+- ✅ **Max Positions**: 10 concurrent positions
+- ✅ **Stop Losses**: Automatic on all trades
+- ✅ **Take Profits**: 2:1 reward targets
+- ✅ **Bracket Orders**: Entry + Stop + Target in one order
+- ✅ **One Position Per Stock**: Prevents overexposure
 
-```python
-# Trading parameters
-self.ma_period = 200  # Moving average period
-self.risk_reward_ratio = 2.0  # 2:1 reward to risk
-self.scan_interval = 300  # Scan every 5 minutes
+### Going Live (Production)
+1. Switch to production branch: `git checkout bot/production`
+2. Update `config/prod.json` with live account settings
+3. Change IBKR port to 7496 (live trading)
+4. Reduce risk to 0.5% per trade
+5. Start with small position sizes
+6. Monitor closely for first month
 
-# Position sizing (in run method)
-risk_per_trade = net_liq * 0.01  # Risk 1% per trade
+## 🧪 Testing
+
+### Run Tests
+```bash
+python -m pytest tests/
 ```
 
-## Risk Management
+### Test Coverage
+- `test_position_manager.py`: Position tracking logic
+- `test_retest_200ma.py`: Strategy pattern detection
+- `test_risk_manager.py`: Risk calculation validation
 
-**Built-in safeguards:**
-- ✅ 2:1 minimum risk/reward on every trade
-- ✅ Automatic stop loss on all positions
-- ✅ Automatic take profit targets
-- ✅ Position sizing based on account risk (1% default)
-- ✅ One position per stock maximum
-- ✅ Paper trading mode by default
+### Paper Trading Checklist
+- [ ] Run for 30+ trading days
+- [ ] Track win rate (>50% target)
+- [ ] Monitor max drawdown (<10%)
+- [ ] Verify signal quality manually
+- [ ] Test during volatile markets
+- [ ] Check error handling
 
-**To go live (only after thorough testing!):**
-1. Change port from 7497 to 7496
-2. Reduce risk per trade to 0.5% or lower
-3. Start with small account
-4. Monitor closely for first few weeks
+## 🔧 Troubleshooting
 
-## Important Notes
+### Connection Issues
+**"Connection Refused"**
+- Ensure TWS/IB Gateway is running
+- Check API settings are enabled
+- Verify correct port (9000 for paper, 7496 for live)
 
-### Pattern Detection
-The bot looks for breakouts in the last 20 days. It requires:
-- Clear break above/below 200 MA
-- Retest within 2% of 200 MA
-- Confirmation bounce in breakout direction
+**"No Market Data"**
+- Accept market data agreements in IBKR Account Management
+- Check if markets are open (9:30 AM - 4:00 PM EST weekdays)
+
+### Trading Issues
+**"Position Size Too Small"**
+- Account balance too low for risk parameters
+- Increase account size or reduce `risk_per_trade_pct`
+
+**"No Signals Found"**
+- Pattern is rare - may take days
+- Check logs for scanning activity
+- Verify historical data loading
+
+### Configuration Issues
+**"Failed to load configuration"**
+- Check JSON syntax in config files
+- Ensure config files exist in `config/` directory
+- Verify Git branch detection for environment selection
+
+## 📊 Performance Monitoring
+
+### Key Metrics Tracked
+- Win Rate: Percentage of profitable trades
+- Average R:R: Risk-reward ratio achieved
+- Max Drawdown: Peak-to-valley decline
+- Sharpe Ratio: Risk-adjusted returns
+- Position Holding Time: Average duration
+
+### Log Analysis
+```bash
+# View recent activity
+tail -f data/logs/trading_bot_*.log
+
+# Count signals found
+grep "Signal found" data/logs/trading_bot_*.log | wc -l
+
+# Check position entries
+grep "Entered position" data/logs/trading_bot_*.log
+```
+
+## 🚀 Deployment
+
+### Local Machine
+- Keep computer running during market hours
+- Bot automatically pauses when market closed
+
+### Cloud Server (Recommended)
+```bash
+# On VPS (AWS, DigitalOcean, etc.)
+nohup python main.py > bot.log 2>&1 &
+```
+
+### Docker Deployment
+```dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "main.py"]
+```
+
+## 📝 Development
+
+### Adding New Strategies
+1. Create new module in `strategy/`
+2. Implement pattern detection logic
+3. Add parameters to `trading_params.json`
+4. Update `order_manager.py` to call new strategy
+
+### Code Quality
+- Follow PEP 8 style guidelines
+- Add type hints to function signatures
+- Write comprehensive unit tests
+- Use logging instead of print statements
+
+### Contributing
+1. Fork the repository
+2. Create feature branch
+3. Add tests for new functionality
+4. Submit pull request
+
+## ⚠️ Important Notes
 
 ### Limitations
-- **Delayed data**: Uses 15-min delayed market data (free tier)
-  - For real-time data, subscribe to IB market data
-- **Scanning time**: Scanning 500+ stocks takes ~5 minutes
-  - Considers historical patterns, not tick-by-tick
-- **Execution**: Uses market orders for entry
-  - May have slippage on less liquid stocks
+- **Delayed Data**: Uses free 15-minute delayed data
+- **Scanning Time**: ~5 minutes for 650 stocks
+- **Market Orders**: May experience slippage
+- **IBKR Dependency**: Requires active IBKR connection
 
-### Running 24/7
+### Legal Disclaimer
+This software is for educational purposes only. Trading involves substantial risk of loss. Past performance does not guarantee future results. Always test thoroughly before using real money.
 
-**Local Computer:**
-- Keep your PC running during market hours
-- Bot automatically pauses when market is closed
+## 📄 License
 
-**Cloud Server (Recommended):**
-```bash
-# On AWS/DigitalOcean VPS
-nohup python bot.py > bot.log 2>&1 &
-```
+MIT License - see LICENSE file for details.
 
-This keeps the bot running even if you disconnect.
+## 🤝 Support
 
-## Troubleshooting
-
-### "Connection Refused" Error
-- TWS/IB Gateway isn't running
-- API not enabled in settings
-- Wrong port number
-
-### "No Market Data" Error  
-- Markets are closed (run during 9:30 AM - 4:00 PM EST weekdays)
-- Or need to accept market data agreements in Account Management
-
-### "Position Size Too Small" Warning
-- Account balance too low for the risk amount
-- Increase account size or adjust risk percentage
-
-### Bot Not Finding Signals
-- Pattern is relatively rare (might take days to find)
-- Check logs to see which stocks were scanned
-- Verify historical data is loading correctly
-
-## Testing
-
-Before running with real money:
-
-1. **Paper trade for 30+ days** minimum
-2. **Track performance**: Win rate, average R:R, drawdown
-3. **Verify pattern quality**: Manually review signals
-4. **Test edge cases**: What happens during volatile markets?
-5. **Monitor logs**: Any errors or unexpected behavior?
-
-## Files
-
-- `bot.py` - Main bot script
-- `_200ma_retest_detection.py` - Helper that does the 200 MA analysis
-- `fetch_stock_list.py` - Helper to get S&P 500/NASDAQ tickers
-- `stocks.txt` - Full list of stocks to monitor (generated)
-- `trading_bot_<month>-<day>-<year>_<hour>-<minute>.log` - Activity log
-- `README.md` - This file
-
-## Example Workflow
-
-**Monday 9:00 AM:**
-1. Start TWS, log into paper trading
-2. Run: `python bot.py`
-3. Bot waits until 9:30 AM market open
-
-**Monday 9:30 AM:**
-- Bot begins scanning stocks
-- Logs: "Scanning 550 stocks..."
-
-**Monday 9:45 AM:**
-- Bot finds signal: LONG AAPL
-- Places bracket order automatically
-- Logs position details
-
-**Monday 4:00 PM:**
+For issues and questions:
+1. Check the troubleshooting section
+2. Review log files for error details
+3. Open an issue on GitHub
+4. Ensure all prerequisites are met
 - Market closes
 - Bot pauses scanning
 - Monitors existing positions

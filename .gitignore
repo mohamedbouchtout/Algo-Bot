@@ -1,0 +1,27 @@
+# Data files (don't commit sensitive trading data)
+data/positions.json
+data/logs/*
+data/performance/*
+
+# Keep directory structure
+!data/.gitkeep
+!data/logs/.gitkeep
+!data/performance/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
