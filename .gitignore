@@ -1,5 +1,6 @@
 # Data files (don't commit sensitive trading data)
 data/positions.json
+data/stock_list.txt
 data/logs/*
 data/performance/*
 
