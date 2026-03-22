@@ -49,7 +49,7 @@ class TradingBot:
 
         # 2. Set environment based on branch
         # If we are on 'main' or 'master', use prod. Otherwise, use dev.
-        env = 'prod' if branch is 'bot/production' else 'dev'
+        env = 'prod' if branch in ['bot/production', 'origin/bot/production'] else 'dev'
         file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/{env}.json')
         
         try:
