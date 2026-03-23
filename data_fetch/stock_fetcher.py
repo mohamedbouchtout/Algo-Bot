@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 class StockTickerFetcher:
     def __init__(self):
-        self.file_path = 'data/stock_list.txt'
+        # Save to repo root data folder instead of data_fetch/data
+        self.file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'stock_list.txt')
         self.stock_list = self.save_stock_list()
 
     def get_sp500_tickers(self):
@@ -99,9 +100,10 @@ class StockTickerFetcher:
         
         logging.info(f"Using {len(stocks)} stocks from curated list")
         
-        # Save to file
-        file_path = os.path.join(os.path.dirname(__file__), self.file_path)
-        with open(file_path, 'w') as f:
+        # Save to file (ensure directory exists)
+        os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+
+        with open(self.file_path, 'w') as f:
             for ticker in stocks:
                 f.write(f"{ticker}\n")
         

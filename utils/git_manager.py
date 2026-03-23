@@ -17,9 +17,6 @@ class GitManager:
         self.ib = ib
         self.config = config
         self.params = params
-        self.host = config['ib']['host']
-        self.port = config['ib']['port']
-        self.client_id = config['ib']['client_id']
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     def git(self, last_git_commit: datetime) -> datetime:
