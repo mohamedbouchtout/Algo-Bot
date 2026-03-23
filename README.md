@@ -9,6 +9,7 @@ A sophisticated automated trading bot that scans S&P 500 and NASDAQ stocks for 2
 - **Risk Management**: Position sizing, stop losses, take profit targets
 - **Bracket Orders**: Automatic entry, stop loss, and take profit orders
 - **Market Hours Detection**: Only trades during NYSE market hours
+- **Email Alerts**: Automated notifications for trades, errors, and daily summaries
 - **Git Integration**: Auto-updates from repository during off-hours
 - **Environment Configuration**: Dev/Prod configs based on Git branch
 - **Comprehensive Logging**: Detailed logs with timestamps
@@ -46,7 +47,7 @@ Algo-Bot/
 │   ├── logger.py         # Logging utilities
 │   └── metrics.py        # Performance metrics
 ├── tests/                # Unit tests
-├── data/                 # Runtime data storage
+├── data/                 # Runtime data storage (auto-created)
 │   ├── logs/            # Log files
 │   └── performance/     # Performance data
 └── requirements.txt      # Python dependencies
@@ -92,6 +93,13 @@ cd Algo-Bot
 ### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
+```
+
+### 3. Configure Environment (Optional)
+For email alerts, create a `.env` file in the project root:
+```
+GMAIL_USER=your-gmail@gmail.com
+GMAIL_PASSWORD=your-app-password
 ```
 
 ### 3. Set Up Interactive Brokers
@@ -154,6 +162,29 @@ The bot uses JSON configuration files in the `config/` directory:
 }
 ```
 
+### Email Alerts Configuration (Optional)
+To enable email notifications, add to your config files:
+```json
+{
+  "alerts": {
+    "enabled": true,
+    "email": "your-email@example.com"
+  }
+}
+```
+
+Set environment variables for Gmail:
+```bash
+export GMAIL_USER="your-gmail@gmail.com"
+export GMAIL_PASSWORD="your-app-password"
+```
+
+Or create a `.env` file:
+```
+GMAIL_USER=your-gmail@gmail.com
+GMAIL_PASSWORD=your-app-password
+```
+
 ## 🚀 Usage
 
 ### Start the Bot
@@ -167,6 +198,7 @@ python main.py
 - ✅ Runs continuously during market hours
 - ✅ Scans stocks every 20 minutes for signals
 - ✅ Places bracket orders when patterns detected
+- ✅ Sends email alerts for trades and errors (if configured)
 - ✅ Monitors existing positions
 - ✅ Auto-commits changes to Git
 - ✅ Logs all activity
@@ -252,6 +284,16 @@ python -m pytest tests/
 - Check JSON syntax in config files
 - Ensure config files exist in `config/` directory
 - Verify Git branch detection for environment selection
+
+**"FileNotFoundError" for stock_list.txt or positions.json**
+- Ensure `data/` directory exists (auto-created on first run)
+- Check file permissions
+- Verify correct working directory when running the bot
+
+**"Gmail authentication failed"**
+- Use Gmail App Passwords (not regular password)
+- Enable 2FA on Gmail account
+- Check environment variables: `GMAIL_USER` and `GMAIL_PASSWORD`
 
 ## 📊 Performance Monitoring
 

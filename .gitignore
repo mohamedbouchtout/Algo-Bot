@@ -3,6 +3,7 @@ data/positions.json
 data/stock_list.txt
 data/logs/*
 data/performance/*
+.env
 
 # Keep directory structure
 !data/.gitkeep

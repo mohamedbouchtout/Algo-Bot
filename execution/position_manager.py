@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class PositionManager:
     def __init__(self, ib, config, params):
         self.ib = ib
-        self.positions_file = 'data/positions.json'
+        self.file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'positions.json')
         self.active_positions = self.load_positions()  # Load existing positions from JSON
         self.config = config
         self.params = params
@@ -70,13 +70,11 @@ class PositionManager:
     def load_positions(self):
         """Load positions from JSON and sync with IB"""
         try:
-            file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), self.positions_file)
-            
-            if not os.path.exists(file_path):
+            if not os.path.exists(self.file_path):
                 logging.info("No positions.json file found - starting fresh")
                 return
             
-            with open(file_path, 'r') as file:
+            with open(self.file_path, 'r') as file:
                 data = json.load(file)
             
             if not data:
@@ -132,7 +130,7 @@ class PositionManager:
             if symbols_to_remove:
                 for symbol in symbols_to_remove:
                     del data[symbol]
-                with open(file_path, 'w') as file:
+                with open(self.file_path, 'w') as file:
                     json.dump(data, file, indent=4)
             
         except Exception as e:
@@ -141,11 +139,9 @@ class PositionManager:
     def add_position(self, symbol: str, signal: Dict, shares: int, entry_time: str):
         """Add new position to tracking"""
         try:
-            file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), self.positions_file)
-            
             # Load existing data
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as file:
+            if os.path.exists(self.file_path):
+                with open(self.file_path, 'r') as file:
                     data = json.load(file)
             else:
                 data = {}
@@ -177,7 +173,7 @@ class PositionManager:
             data[symbol] = new_entry
             
             # Write back to file
-            with open(file_path, 'w') as file:
+            with open(self.file_path, 'w') as file:
                 json.dump(data, file, indent=4)
             
             logging.debug(f"Saved position {symbol} to positions.json")
@@ -189,18 +185,16 @@ class PositionManager:
     def remove_position(self, symbol: str):
         """Remove closed position"""
         try:
-            file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), self.positions_file)
-            
-            if not os.path.exists(file_path):
+            if not os.path.exists(self.file_path):
                 return
             
-            with open(file_path, 'r') as file:
+            with open(self.file_path, 'r') as file:
                 data = json.load(file)
             
             if symbol in data:
                 del data[symbol]
                 
-                with open(file_path, 'w') as file:
+                with open(self.file_path, 'w') as file:
                     json.dump(data, file, indent=4)
                 
                 logging.debug(f"Removed position {symbol} from positions.json")

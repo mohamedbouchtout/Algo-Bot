@@ -11,6 +11,7 @@ from execution.risk_manager import RiskManager
 from execution.position_manager import PositionManager
 from data_fetch.historical_data import StockDataFetcher
 from strategy.retest_200ma.indicators import TrendIndicator
+from utils.alerts import AlertManager
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class OrderManager:
         self.position_manager = position_manager
         self.config = config
         self.params = params
+        self.alert_manager = AlertManager(self.config)
 
     def scan_stocks(self, stock_list: list[str]):
         """Scan all stocks for trading signals"""
@@ -147,5 +149,8 @@ class OrderManager:
                         f"{shares} shares @ ${signal['entry']:.2f}, "
                         f"Stop: ${signal['stop']:.2f}, Target: ${signal['target']:.2f}")
             
+            # Send email alert for new trade entry
+            self.alert_manager.alert_trade_entry(signal)
+
         except Exception as e:
             logging.error(f"Failed to place order for {signal['symbol']}: {e}")

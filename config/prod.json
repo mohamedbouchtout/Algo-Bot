@@ -8,6 +8,10 @@
         "level": "INFO",
         "console": true
     },
+    "alerts": {
+        "enabled": true,
+        "email": "mohamedbouchtout@gmail.com"
+    },
     "git": {
         "enabled": true,
         "branch": "bot/production",
