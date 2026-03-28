@@ -16,7 +16,7 @@ class StockDataFetcher:
         self.ib = ib
         self.config = config
         self.params = params
-    
+
     def get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
         """Fetch historical daily data for a stock"""
         try:

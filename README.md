@@ -112,7 +112,7 @@ GMAIL_PASSWORD=your-app-password
    - Launch TWS/IB Gateway
    - File → Global Configuration → API → Settings
    - ✅ Enable ActiveX and Socket Clients
-   - Socket port: 9000 (paper trading)
+   - Socket port: 7497 (paper trading)
    - ✅ Allow connections from localhost only
    - ✅ Read-only API (for safety)
 
@@ -132,22 +132,30 @@ The bot uses JSON configuration files in the `config/` directory:
 ### Trading Parameters (`config/trading_params.json`)
 ```json
 {
-  "strategy_retest_200ma": {
-    "ma_period": 200,
-    "risk_reward_ratio": 2.0,
-    "lookback_days": 250,
-    "min_breakout_volume": 2.0,
-    "retest_distance": 0.005
-  },
-  "risk_management": {
-    "risk_per_trade_pct": 0.01,
-    "max_investment_pct": 0.70,
-    "max_positions": 10
-  },
-  "timing": {
-    "scan_interval": 1200,
-    "market_check_interval": 900
-  }
+    "strategy_retest_200ma": {
+        "ma_period": 200,
+        "ma_slope_period": 20,
+        "min_uptrend_slope": -0.01,
+        "max_downtrend_slope": 0.01,
+        "risk_reward_ratio": 2.0,
+        "lookback_days": 250,
+        "min_breakout_volume": 1.7,
+        "min_breakout_strength": 0.7,
+        "min_bounce_strength": 0.02,
+        "max_retest_volume_ratio": 0.5,
+        "max_retest_volume_absolute": 0.8,
+        "max_days_since_retest": 3,
+        "retest_distance": 0.005
+    },
+    "risk_management": {
+        "risk_per_trade_pct": 0.05,
+        "max_investment_pct": 0.70,
+        "max_positions": 10
+    },
+    "timing": {
+        "scan_interval": 1200,
+        "market_check_interval": 900
+    }
 }
 ```
 
@@ -156,7 +164,7 @@ The bot uses JSON configuration files in the `config/` directory:
 {
   "ib": {
     "host": "127.0.0.1",
-    "port": 9000,
+    "port": 7497,
     "client_id": 1
   }
 }
@@ -174,12 +182,20 @@ To enable email notifications, add to your config files:
 ```
 
 Set environment variables for Gmail:
+
+Unix/macOS:
 ```bash
 export GMAIL_USER="your-gmail@gmail.com"
 export GMAIL_PASSWORD="your-app-password"
 ```
 
-Or create a `.env` file:
+Windows PowerShell:
+```powershell
+$env:GMAIL_USER = "your-gmail@gmail.com"
+$env:GMAIL_PASSWORD = "your-app-password"
+```
+
+Or create a `.env` file in the project root:
 ```
 GMAIL_USER=your-gmail@gmail.com
 GMAIL_PASSWORD=your-app-password
@@ -204,15 +220,15 @@ python main.py
 - ✅ Logs all activity
 
 ### Monitor Activity
-The bot creates timestamped log files in `data/logs/`:
+The bot creates timestamped log files in `data/bot_logs/`:
 ```
-data/logs/trading_bot_3-22-2026_14-30.log
+data/bot_logs/trading_bot_3-22-2026_14-30.log
 ```
 
 Example log output:
 ```
 2026-03-22 14:30:00 - INFO - Starting trading bot...
-2026-03-22 14:30:01 - INFO - Connected to IB at 127.0.0.1:9000
+2026-03-22 14:30:01 - INFO - Connected to IB at 127.0.0.1:7497
 2026-03-22 14:30:02 - INFO - Scanning 650 stocks...
 2026-03-22 14:32:15 - INFO - Signal found: LONG AAPL @ $225.50
 2026-03-22 14:32:16 - INFO - Entered position: AAPL LONG, 40 shares @ $225.50
@@ -241,13 +257,19 @@ Example log output:
 
 ### Run Tests
 ```bash
-python -m pytest tests/
+python run_tests.py
 ```
 
 ### Test Coverage
 - `test_position_manager.py`: Position tracking logic
 - `test_retest_200ma.py`: Strategy pattern detection
 - `test_risk_manager.py`: Risk calculation validation
+
+### Monitor Activity
+The tests creates timestamped log files in `data/test_logs/`:
+```
+data/test_logs/test_retest_200ma_3-22-2026_14-30.log
+```
 
 ### Paper Trading Checklist
 - [ ] Run for 30+ trading days
@@ -263,7 +285,7 @@ python -m pytest tests/
 **"Connection Refused"**
 - Ensure TWS/IB Gateway is running
 - Check API settings are enabled
-- Verify correct port (9000 for paper, 7496 for live)
+- Verify correct port (7497 for paper, 7496 for live)
 
 **"No Market Data"**
 - Accept market data agreements in IBKR Account Management
