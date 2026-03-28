@@ -12,9 +12,11 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 class StockDataFetcher:
-    def __init__(self, ib):
+    def __init__(self, ib, config, params):
         self.ib = ib
-    
+        self.config = config
+        self.params = params
+
     def get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
         """Fetch historical daily data for a stock"""
         try:

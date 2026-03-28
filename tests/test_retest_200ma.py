@@ -28,10 +28,10 @@ logging.basicConfig(
 class TestRetest200MA:
     def __init__(self):
         self.ib = IB()
-        self.stock_data_fetcher = StockDataFetcher(self.ib)
-        self.stock_fetcher = StockTickerFetcher()
         self.config = self.load_config()
         self.params = self.load_params()
+        self.stock_data_fetcher = StockDataFetcher(self.ib, self.config, self.params)
+        self.stock_fetcher = StockTickerFetcher()
 
     def load_params(self):
         """Load parameters from JSON file"""
@@ -78,22 +78,24 @@ class TestRetest200MA:
             return
 
         signals = []
-        for ticker in self.stock_fetcher.stock_list:
-            logging.info(f"Testing {ticker}...")
-            df = self.stock_data_fetcher.get_historical_data(ticker)
-            
-            if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
-                logging.warning(f"Not enough data for {ticker}, skipping.")
-                continue
-            
-            indicator_200ma = TrendIndicator(df, self.config, self.params)
-            signal = indicator_200ma.detect_breakout_and_retest()
-            
-            if signal:
-                logging.info(f"Signal detected for {ticker}: {signal}")
-                signals.append((ticker, signal))
-            else:
-                logging.info(f"No signal for {ticker}.")
+        try:
+            for ticker in self.stock_fetcher.stock_list:
+                logging.info(f"Testing {ticker}...")
+                df = self.stock_data_fetcher.get_historical_data(ticker)
+                
+                indicator_200ma = TrendIndicator(df, self.config, self.params)
+                signal = indicator_200ma.detect_breakout_and_retest()
+                
+                if signal:
+                    logging.info(f"Signal detected for {ticker}: {signal}")
+                    signals.append((ticker, signal))
+                else:
+                    logging.info(f"No signal for {ticker}.")
 
-        logging.info(f"Total signals detected: {len(signals)}")
-        connection_manager.disconnect()
+        except KeyboardInterrupt:
+            logging.info("Bot stopped by user")
+        except Exception as e:
+            logging.error(f"Bot error: {e}")
+        finally:
+            logging.info(f"Total signals detected: {len(signals)}")
+            connection_manager.disconnect()
