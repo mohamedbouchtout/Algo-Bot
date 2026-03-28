@@ -212,9 +212,9 @@ python main.py
 - ✅ Logs all activity
 
 ### Monitor Activity
-The bot creates timestamped log files in `data/logs/`:
+The bot creates timestamped log files in `data/bot_logs/`:
 ```
-data/logs/trading_bot_3-22-2026_14-30.log
+data/bot_logs/trading_bot_3-22-2026_14-30.log
 ```
 
 Example log output:
@@ -256,6 +256,12 @@ python run_tests.py
 - `test_position_manager.py`: Position tracking logic
 - `test_retest_200ma.py`: Strategy pattern detection
 - `test_risk_manager.py`: Risk calculation validation
+
+### Monitor Activity
+The tests creates timestamped log files in `data/test_logs/`:
+```
+data/test_logs/test_retest_200ma_3-22-2026_14-30.log
+```
 
 ### Paper Trading Checklist
 - [ ] Run for 30+ trading days
