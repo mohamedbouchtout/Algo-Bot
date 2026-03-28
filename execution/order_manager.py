@@ -34,7 +34,7 @@ class OrderManager:
                 continue
             
             # Get historical data
-            stock_data = StockDataFetcher(self.ib, self.config, self.params)
+            stock_data = StockDataFetcher(self.ib)
             df = stock_data.get_historical_data(symbol)
             
             if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:

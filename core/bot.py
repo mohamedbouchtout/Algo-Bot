@@ -19,12 +19,12 @@ from utils.git_manager import GitManager
 
 # Setup logging
 now = datetime.now()
-os.makedirs('data/logs', exist_ok=True)
+os.makedirs('data/bot_logs', exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(f'data/logs/trading_bot_{now.month}-{now.day}-{now.year}_{now.hour}-{now.minute}.log'),
+        logging.FileHandler(f'data/bot_logs/trading_bot_{now.month}-{now.day}-{now.year}_{now.hour}-{now.minute}.log'),
         logging.StreamHandler()
     ]
 )

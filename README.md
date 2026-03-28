@@ -174,12 +174,20 @@ To enable email notifications, add to your config files:
 ```
 
 Set environment variables for Gmail:
+
+Unix/macOS:
 ```bash
 export GMAIL_USER="your-gmail@gmail.com"
 export GMAIL_PASSWORD="your-app-password"
 ```
 
-Or create a `.env` file:
+Windows PowerShell:
+```powershell
+$env:GMAIL_USER = "your-gmail@gmail.com"
+$env:GMAIL_PASSWORD = "your-app-password"
+```
+
+Or create a `.env` file in the project root:
 ```
 GMAIL_USER=your-gmail@gmail.com
 GMAIL_PASSWORD=your-app-password
@@ -241,7 +249,7 @@ Example log output:
 
 ### Run Tests
 ```bash
-python -m pytest tests/
+python run_tests.py
 ```
 
 ### Test Coverage
