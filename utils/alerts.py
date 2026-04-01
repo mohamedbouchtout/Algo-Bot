@@ -17,11 +17,12 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 class AlertManager:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, params: dict):
         """
         Initialize email alert system
         """
         self.config = config.get('alerts', {})
+        self.params = params
         self.enabled = self.config.get('enabled', False)
         self.to_email = self.config.get('email', '')
         

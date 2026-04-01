@@ -7,18 +7,20 @@ import os
 import logging
 from ib_insync import *
 from typing import Dict
+from utils.alerts import AlertManager
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
 class PositionManager:
-    def __init__(self, ib, config, params):
+    def __init__(self, ib, alert_manager: AlertManager, config, params):
         self.ib = ib
         self.file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'positions.json')
         self.active_positions = self.load_positions()  # Load existing positions from JSON
         self.config = config
         self.params = params
-    
+        self.alert_manager = alert_manager
+
     def monitor_positions(self):
         """Monitor and manage active positions"""
         # Get current positions from IB
@@ -45,6 +47,15 @@ class PositionManager:
 
                 # Remove from JSON
                 self.remove_position(symbol)
+                self.alert_manager.alert_trade_exit(
+                    symbol = symbol,
+                    exit_type = position_info['signal']['type'],
+                    pnl = 0,
+                    pnl_pct = 0,
+                    entry_price = position_info['signal']['entry'],
+                    exit_price = None,
+                    shares = position_info['shares']
+                )
         
         # Log summary
         if closed_positions:

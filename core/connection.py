@@ -7,13 +7,15 @@ import os
 import sys
 from ib_insync import *
 from execution.position_manager import PositionManager
+from utils.alerts import AlertManager
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
 class ConnectionManager:
-    def __init__(self, ib, config, params):
+    def __init__(self, ib, alert_manager: AlertManager, config, params):
         self.ib = ib
+        self.alert_manager = alert_manager
         self.config = config
         self.params = params
         self.host = config['ib']['host']
@@ -30,6 +32,7 @@ class ConnectionManager:
                 # Try to connect
                 self.ib.connect(self.host, port, clientId=self.client_id)
                 self.port = port  # Store the successful port
+                self.alert_manager.alert_bot_started()  # Alert that bot has started successfully
                 
                 logging.info(f"Connected to IB at {self.host}:{port}")
                 

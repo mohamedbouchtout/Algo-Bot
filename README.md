@@ -418,7 +418,7 @@ For issues and questions:
 
 For issues:
 1. Check `trading_bot_<month>-<day>-<year>_<hour>-<minute>.log` for errors
-2. Verify TWS is running and API enabled
+2. Verify IB Gateway or TWS is running and API enabled
 3. Ensure markets are open (for live data)
 4. Review IB API documentation: https://interactivebrokers.github.io/
 
