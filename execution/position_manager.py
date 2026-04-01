@@ -83,14 +83,14 @@ class PositionManager:
         try:
             if not os.path.exists(self.file_path):
                 logging.info("No positions.json file found - starting fresh")
-                return
+                return {}
             
             with open(self.file_path, 'r') as file:
                 data = json.load(file)
             
             if not data:
                 logging.info("positions.json is empty - starting fresh")
-                return
+                return {}
             
             # Get actual IB positions to verify
             ib_positions = self.ib.positions()

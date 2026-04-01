@@ -79,8 +79,8 @@ class TradingBot:
         stock_fetcher = StockTickerFetcher()
         scheduler = Scheduler()
         alert_manager = AlertManager(self.config, self.params)
-        connection_manager = ConnectionManager(self.ib, alert_manager, self.config, self.params)
         position_manager = PositionManager(self.ib, alert_manager, self.config, self.params)
+        connection_manager = ConnectionManager(self.ib, position_manager, alert_manager, self.config, self.params)
         order_manager = OrderManager(self.ib, position_manager, alert_manager, self.config, self.params)
         git_manager = GitManager(self.ib, connection_manager, self.config, self.params)
 
