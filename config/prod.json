@@ -1,7 +1,7 @@
 {
     "ib": {
         "host": "127.0.0.1",
-        "port": 7496,
+        "ports": [4001, 7496],
         "client_id": 1
     },
     "logging": {

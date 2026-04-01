@@ -7,6 +7,7 @@ A sophisticated automated trading bot that scans S&P 500 and NASDAQ stocks for 2
 - **Automated Pattern Detection**: Scans for 200 MA breakout and retest patterns
 - **Dual Strategy Support**: Long and short positions based on trend direction
 - **Risk Management**: Position sizing, stop losses, take profit targets
+- **IBKR Multi-Port Support**: Tries multiple configured IB ports for robust connection
 - **Bracket Orders**: Automatic entry, stop loss, and take profit orders
 - **Market Hours Detection**: Only trades during NYSE market hours
 - **Email Alerts**: Automated notifications for trades, errors, and daily summaries
@@ -48,8 +49,9 @@ Algo-Bot/
 │   └── metrics.py        # Performance metrics
 ├── tests/                # Unit tests
 ├── data/                 # Runtime data storage (auto-created)
-│   ├── logs/            # Log files
-│   └── performance/     # Performance data
+│   ├── bot_logs/         # Log files for runs
+│   ├── test_logs/        # Log files for test runs
+│   └── performance/      # Performance data
 └── requirements.txt      # Python dependencies
 ```
 
@@ -112,7 +114,7 @@ GMAIL_PASSWORD=your-app-password
    - Launch TWS/IB Gateway
    - File → Global Configuration → API → Settings
    - ✅ Enable ActiveX and Socket Clients
-   - Socket port: 7497 (paper trading)
+   - Set the socket port to the value(s) configured in `config/dev.json` or `config/prod.json`
    - ✅ Allow connections from localhost only
    - ✅ Read-only API (for safety)
 
@@ -164,11 +166,15 @@ The bot uses JSON configuration files in the `config/` directory:
 {
   "ib": {
     "host": "127.0.0.1",
-    "port": 7497,
+    "ports": [4002, 7497],
     "client_id": 1
   }
 }
 ```
+The bot will attempt each configured port in order until it connects successfully.
+Use the same format in your environment files:
+- `config/dev.json`: typically `"ports": [4002, 7497]`
+- `config/prod.json`: typically `"ports": [4001, 7496]`
 
 ### Email Alerts Configuration (Optional)
 To enable email notifications, add to your config files:
@@ -228,7 +234,7 @@ data/bot_logs/trading_bot_3-22-2026_14-30.log
 Example log output:
 ```
 2026-03-22 14:30:00 - INFO - Starting trading bot...
-2026-03-22 14:30:01 - INFO - Connected to IB at 127.0.0.1:7497
+2026-03-22 14:30:01 - INFO - Connected to IB at 127.0.0.1:4002
 2026-03-22 14:30:02 - INFO - Scanning 650 stocks...
 2026-03-22 14:32:15 - INFO - Signal found: LONG AAPL @ $225.50
 2026-03-22 14:32:16 - INFO - Entered position: AAPL LONG, 40 shares @ $225.50
@@ -329,13 +335,13 @@ data/test_logs/test_retest_200ma_3-22-2026_14-30.log
 ### Log Analysis
 ```bash
 # View recent activity
-tail -f data/logs/trading_bot_*.log
+tail -f data/bot_logs/trading_bot_*.log
 
 # Count signals found
-grep "Signal found" data/logs/trading_bot_*.log | wc -l
+grep "Signal found" data/bot_logs/trading_bot_*.log | wc -l
 
 # Check position entries
-grep "Entered position" data/logs/trading_bot_*.log
+grep "Entered position" data/bot_logs/trading_bot_*.log
 ```
 
 ## 🚀 Deployment

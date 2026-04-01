@@ -17,24 +17,42 @@ class ConnectionManager:
         self.config = config
         self.params = params
         self.host = config['ib']['host']
-        self.port = config['ib']['port']
+        self.ports = config['ib']['ports']
+        self.port = 0  # Will be set during connection attempts
         self.client_id = config['ib']['client_id']
 
     def connect(self):
         """Connect to Interactive Brokers"""
-        try:
-            self.ib.connect(self.host, self.port, clientId=self.client_id)
-            self.ib.reqMarketDataType(3)  # Use delayed data (free)
-            logging.info(f"Connected to IB at {self.host}:{self.port}")
-
-            # Load existing positions from JSON on startup
-            position_manager = PositionManager(self.ib, self.config, self.params)
-            position_manager.load_positions()
-
-            return True
-        except Exception as e:
-            logging.error(f"Connection failed: {e}")
-            return False
+        for port in self.ports:
+            try:
+                logging.info(f"Attempting connection to {self.host}:{port}...")
+                
+                # Try to connect
+                self.ib.connect(self.host, port, clientId=self.client_id)
+                self.port = port  # Store the successful port
+                
+                logging.info(f"Connected to IB at {self.host}:{port}")
+                
+                # Set market data type
+                self.ib.reqMarketDataType(3)  # Delayed/free data
+                
+                # Load positions and STORE the manager
+                position_manager = PositionManager(self.ib, self.config, self.params)
+                position_manager.load_positions()
+                
+                return True
+                
+            except ConnectionRefusedError:
+                logging.warning(f"Connection refused on port {port}, trying next...")
+                continue
+            except Exception as e:
+                logging.error(f"Connection failed on port {port}: {e}")
+                continue
+        
+        # If we get here, all ports failed
+        logging.error(f"Failed to connect to any port: {self.ports}")
+        logging.error("Make sure TWS or IB Gateway is running with API enabled")
+        return False
     
     def disconnect(self):
         """Disconnect from Interactive Brokers"""
