@@ -17,12 +17,12 @@ from utils.alerts import AlertManager
 logger = logging.getLogger(__name__)
 
 class OrderManager:
-    def __init__(self, ib, position_manager: PositionManager, config, params):
+    def __init__(self, ib, position_manager: PositionManager, alert_manager: AlertManager, config, params):
         self.ib = ib
         self.position_manager = position_manager
         self.config = config
         self.params = params
-        self.alert_manager = AlertManager(self.config)
+        self.alert_manager = alert_manager
 
     def scan_stocks(self, stock_list: list[str]):
         """Scan all stocks for trading signals"""

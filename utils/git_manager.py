@@ -13,8 +13,9 @@ from core.connection import ConnectionManager
 logger = logging.getLogger(__name__)
 
 class GitManager:
-    def __init__(self, ib, config, params):
+    def __init__(self, ib, connection_manager: ConnectionManager, config, params):
         self.ib = ib
+        self.connection_manager = connection_manager
         self.config = config
         self.params = params
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,8 +32,7 @@ class GitManager:
             if self.check_for_updates():
                 logging.info("Updating and restarting bot to apply new changes...")
                 if self.pull_updates():
-                    connection_manager = ConnectionManager(self.ib, self.config, self.params)
-                    connection_manager.restart_bot()
+                    self.connection_manager.restart_bot()
 
         return last_git_commit
 

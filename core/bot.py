@@ -16,6 +16,7 @@ from data_fetch.stock_fetcher import StockTickerFetcher
 from execution.order_manager import OrderManager
 from execution.position_manager import PositionManager
 from utils.git_manager import GitManager
+from utils.alerts import AlertManager
 
 # Setup logging
 now = datetime.now()
@@ -77,10 +78,11 @@ class TradingBot:
         
         stock_fetcher = StockTickerFetcher()
         scheduler = Scheduler()
-        connection_manager = ConnectionManager(self.ib, self.config, self.params)
-        position_manager = PositionManager(self.ib, self.config, self.params)
-        order_manager = OrderManager(self.ib, position_manager, self.config, self.params)
-        git_manager = GitManager(self.ib, self.config, self.params)
+        alert_manager = AlertManager(self.config, self.params)
+        connection_manager = ConnectionManager(self.ib, alert_manager, self.config, self.params)
+        position_manager = PositionManager(self.ib, alert_manager, self.config, self.params)
+        order_manager = OrderManager(self.ib, position_manager, alert_manager, self.config, self.params)
+        git_manager = GitManager(self.ib, connection_manager, self.config, self.params)
 
         if not connection_manager.connect():
             logging.error("Failed to connect. Exiting.")
@@ -121,7 +123,9 @@ class TradingBot:
                     
         except KeyboardInterrupt:
             logging.info("Bot stopped by user")
+            alert_manager.alert_bot_stopped()
         except Exception as e:
             logging.error(f"Bot error: {e}")
+            alert_manager.alert_error(str(e), "Unexpected bot error thrown.")
         finally:
             connection_manager.disconnect()
