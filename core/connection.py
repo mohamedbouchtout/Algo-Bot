@@ -13,9 +13,10 @@ from utils.alerts import AlertManager
 logger = logging.getLogger(__name__)
 
 class ConnectionManager:
-    def __init__(self, ib, alert_manager: AlertManager, config, params):
+    def __init__(self, ib, position_manager: PositionManager, alert_manager: AlertManager, config, params):
         self.ib = ib
         self.alert_manager = alert_manager
+        self.position_manager = position_manager
         self.config = config
         self.params = params
         self.host = config['ib']['host']
@@ -40,8 +41,7 @@ class ConnectionManager:
                 self.ib.reqMarketDataType(3)  # Delayed/free data
                 
                 # Load positions and STORE the manager
-                position_manager = PositionManager(self.ib, self.config, self.params)
-                position_manager.load_positions()
+                self.position_manager.load_positions()
                 
                 return True
                 

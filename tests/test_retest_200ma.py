@@ -13,6 +13,7 @@ from data_fetch.historical_data import StockDataFetcher
 from data_fetch.stock_fetcher import StockTickerFetcher
 from core.connection import ConnectionManager
 from utils.alerts import AlertManager
+from execution.position_manager import PositionManager
 
 # Setup logging
 now = datetime.now()
@@ -34,6 +35,7 @@ class TestRetest200MA:
         self.stock_data_fetcher = StockDataFetcher(self.ib, self.config, self.params)
         self.stock_fetcher = StockTickerFetcher()
         self.alert_manager = AlertManager(self.config, self.params)
+        self.position_manager = PositionManager(self.ib, self.alert_manager, self.config, self.params)
 
     def load_params(self):
         """Load parameters from JSON file"""
@@ -74,7 +76,7 @@ class TestRetest200MA:
     def test_retest_200ma(self):
         """Test the 200 MA breakout and retest logic on historical data"""
 
-        connection_manager = ConnectionManager(self.ib, self.alert_manager, self.config, self.params)
+        connection_manager = ConnectionManager(self.ib, self.position_manager, self.alert_manager, self.config, self.params)
         if not connection_manager.connect():
             logging.error("Failed to connect. Exiting.")
             return
