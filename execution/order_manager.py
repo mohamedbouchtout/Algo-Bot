@@ -6,7 +6,6 @@ import logging
 from ib_insync import *
 from typing import Dict
 from datetime import datetime
-import time as time_module
 from execution.risk_manager import RiskManager
 from execution.position_manager import PositionManager
 from data_fetch.historical_data import StockDataFetcher
@@ -35,6 +34,7 @@ class OrderManager:
                 continue
             
             # Get historical data
+            logging.info(f"Testing {symbol}...")
             df = self.stock_data.get_historical_data(symbol)
             
             if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
@@ -52,7 +52,7 @@ class OrderManager:
                 self.execute_signal(signal)  # Execute immediately for each signal
             
             # Small delay to avoid rate limiting
-            time_module.sleep(0.5)
+            self.ib.sleep(1)
 
     def execute_signal(self, signal: Dict):
         """Execute trading signals"""

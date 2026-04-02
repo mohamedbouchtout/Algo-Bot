@@ -120,6 +120,7 @@ class TrendDetector:
                     # Calculate MA slope for logging
                     ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
                     
+                    logging.info(f"Long pattern detected on {DF['symbol'].iloc[0]}")
                     return {
                         'type': 'LONG',
                         'symbol': DF['symbol'].iloc[0],
@@ -140,6 +141,7 @@ class TrendDetector:
                         'ma_slope_pct': ma_slope * 100  # For easier reading
                     }
         
+        logging.info(f"No long pattern detected on {DF['symbol'].iloc[0]}")
         return None
     
     def detect_short_pattern(self, DF: pd.DataFrame) -> Optional[Dict]:
@@ -247,6 +249,7 @@ class TrendDetector:
                         # Calculate MA slope
                         ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
                         
+                        logging.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
                         return {
                             'type': 'SHORT',
                             'symbol': DF['symbol'].iloc[0],
@@ -267,4 +270,5 @@ class TrendDetector:
                             'ma_slope_pct': ma_slope * 100
                         }
         
+        logging.info(f"No short pattern detected on {DF['symbol'].iloc[0]}")
         return None

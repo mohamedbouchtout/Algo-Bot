@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 import os
 import json
-import time as time_module
 from ib_insync import *
 from core.connection import ConnectionManager
 from core.scheduler import Scheduler
@@ -108,20 +107,20 @@ class TradingBot:
 
                     # Wait before next scan
                     logging.info(f"Waiting {self.params['timing']['scan_interval']} seconds until next scan...")
-                    time_module.sleep(self.params['timing']['scan_interval'])
+                    self.ib.sleep(self.params['timing']['scan_interval'])
 
                 elif not scheduler.is_market_hours() and not connection_manager.ensure_connected():
                     logging.warning("Cannot connect to IB and market is closed - will retry in 15 minutes")
                     last_git_commit = git_manager.git(last_git_commit)  # Update last_git_commit if it was changed
-                    time_module.sleep(900)  # Wait 15 minutes before retrying connection
+                    self.ib.sleep(900)  # 15 minutes
                 elif not connection_manager.ensure_connected():
                     logging.warning("Cannot connect to IB - will retry in 15 minutes")
                     last_git_commit = git_manager.git(last_git_commit)  # Update last_git_commit if it was changed
-                    time_module.sleep(900)  # Wait 15 minutes before retrying connection
+                    self.ib.sleep(900)  # 15 minutes
                 else:
                     logging.info(f"Market is closed. Next check in 15 minutes...")
                     last_git_commit = git_manager.git(last_git_commit)  # Update last_git_commit if it was changed
-                    time_module.sleep(900)  # 15 minutes
+                    self.ib.sleep(900)  # 15 minutes
                     
         except KeyboardInterrupt:
             logging.info("Bot stopped by user")
