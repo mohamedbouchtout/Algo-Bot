@@ -13,6 +13,7 @@ from ib_insync import *
 from core.connection import ConnectionManager
 from core.scheduler import Scheduler
 from data_fetch.stock_fetcher import StockTickerFetcher
+from data_fetch.historical_data import StockDataFetcher
 from execution.order_manager import OrderManager
 from execution.position_manager import PositionManager
 from utils.git_manager import GitManager
@@ -77,11 +78,12 @@ class TradingBot:
         logging.info("Starting trading bot...")
         
         stock_fetcher = StockTickerFetcher()
+        stock_data = StockDataFetcher(self.ib, self.config, self.params)
         scheduler = Scheduler()
         alert_manager = AlertManager(self.config, self.params)
         position_manager = PositionManager(self.ib, alert_manager, self.config, self.params)
         connection_manager = ConnectionManager(self.ib, position_manager, alert_manager, self.config, self.params)
-        order_manager = OrderManager(self.ib, position_manager, alert_manager, self.config, self.params)
+        order_manager = OrderManager(self.ib, stock_data, position_manager, alert_manager, self.config, self.params)
         git_manager = GitManager(self.ib, connection_manager, self.config, self.params)
 
         if not connection_manager.connect():

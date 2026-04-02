@@ -17,12 +17,13 @@ from utils.alerts import AlertManager
 logger = logging.getLogger(__name__)
 
 class OrderManager:
-    def __init__(self, ib, position_manager: PositionManager, alert_manager: AlertManager, config, params):
+    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, config, params):
         self.ib = ib
+        self.stock_data = stock_data
         self.position_manager = position_manager
+        self.alert_manager = alert_manager
         self.config = config
         self.params = params
-        self.alert_manager = alert_manager
 
     def scan_stocks(self, stock_list: list[str]):
         """Scan all stocks for trading signals"""
@@ -34,8 +35,7 @@ class OrderManager:
                 continue
             
             # Get historical data
-            stock_data = StockDataFetcher(self.ib, self.config, self.params)
-            df = stock_data.get_historical_data(symbol)
+            df = self.stock_data.get_historical_data(symbol)
             
             if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
                 continue
