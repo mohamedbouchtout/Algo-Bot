@@ -50,6 +50,8 @@ class OrderManager:
                         f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
                 
                 self.execute_signal(signal)  # Execute immediately for each signal
+            else:
+                logging.info(f"No signal found for {symbol}")
             
             # Small delay to avoid rate limiting
             self.ib.sleep(1)

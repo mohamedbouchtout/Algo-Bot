@@ -141,7 +141,6 @@ class TrendDetector:
                         'ma_slope_pct': ma_slope * 100  # For easier reading
                     }
         
-        logging.info(f"No long pattern detected on {DF['symbol'].iloc[0]}")
         return None
     
     def detect_short_pattern(self, DF: pd.DataFrame) -> Optional[Dict]:
@@ -270,5 +269,4 @@ class TrendDetector:
                             'ma_slope_pct': ma_slope * 100
                         }
         
-        logging.info(f"No short pattern detected on {DF['symbol'].iloc[0]}")
         return None

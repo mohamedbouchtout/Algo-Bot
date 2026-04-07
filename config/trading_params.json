@@ -20,7 +20,7 @@
         "max_positions": 10
     },
     "timing": {
-        "scan_interval": 1200,
+        "scan_interval": 1800,
         "market_check_interval": 900
     }
 }
