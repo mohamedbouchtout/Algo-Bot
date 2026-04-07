@@ -110,17 +110,17 @@ class TradingBot:
                     self.ib.sleep(self.params['timing']['scan_interval'])
 
                 elif not scheduler.is_market_hours() and not connection_manager.ensure_connected():
-                    logging.warning("Cannot connect to IB and market is closed - will retry in 15 minutes")
+                    logging.warning("Cannot connect to IB and market is closed - will retry in 30 minutes")
                     last_git_commit = git_manager.git(last_git_commit)  # Update last_git_commit if it was changed
-                    self.ib.sleep(900)  # 15 minutes
+                    self.ib.sleep(1800)  # 30 minutes
                 elif not connection_manager.ensure_connected():
-                    logging.warning("Cannot connect to IB - will retry in 15 minutes")
+                    logging.warning("Cannot connect to IB - will retry in 1 minute")
                     last_git_commit = git_manager.git(last_git_commit)  # Update last_git_commit if it was changed
-                    self.ib.sleep(900)  # 15 minutes
+                    self.ib.sleep(60)  # 1 minute
                 else:
-                    logging.info(f"Market is closed. Next check in 15 minutes...")
+                    logging.info(f"Market is closed. Next check in 30 minutes...")
                     last_git_commit = git_manager.git(last_git_commit)  # Update last_git_commit if it was changed
-                    self.ib.sleep(900)  # 15 minutes
+                    self.ib.sleep(1800)  # 30 minutes
                     
         except KeyboardInterrupt:
             logging.info("Bot stopped by user")

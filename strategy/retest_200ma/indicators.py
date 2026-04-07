@@ -26,8 +26,6 @@ class TrendIndicator:
         if len(self.df) < self.params["strategy_retest_200ma"]["ma_period"] + 20:
             return None
         
-        logging.info("Using 200MA retest startegy analysis...")
-
         # Calculate 200 MA
         trend_validator = TrendValidator(self.df, self.config, self.params)
         self.df['ma200'] = trend_validator.calculate_ma(self.params["strategy_retest_200ma"]["ma_period"])
