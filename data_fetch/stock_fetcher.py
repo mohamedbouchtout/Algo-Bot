@@ -9,7 +9,7 @@ import requests
 import json
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class StockTickerFetcher:
     def __init__(self):
@@ -21,7 +21,7 @@ class StockTickerFetcher:
         """Fetch S&P 500 from GitHub dataset"""
         try:
             url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-            logging.info("Fetching S&P 500 from GitHub...")
+            logger.info("Fetching S&P 500 from GitHub...")
             
             response = requests.get(url, timeout=10)
             response.raise_for_status()
@@ -30,18 +30,18 @@ class StockTickerFetcher:
             lines = response.text.strip().split('\n')
             tickers = [line.split(',')[0] for line in lines[1:]]  # Skip header
             
-            logging.info(f"S&P 500: {len(tickers)} stocks")
+            logger.info(f"S&P 500: {len(tickers)} stocks")
             return tickers
             
         except Exception as e:
-            logging.error(f"Failed to fetch S&P 500: {e}")
+            logger.error(f"Failed to fetch S&P 500: {e}")
             return []
 
     def get_nasdaq100_tickers(self):
         """Fetch NASDAQ-100 from GitHub dataset"""
         try:
             url = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"
-            logging.info("Fetching NASDAQ from GitHub...")
+            logger.info("Fetching NASDAQ from GitHub...")
             
             response = requests.get(url, timeout=10)
             response.raise_for_status()
@@ -70,12 +70,12 @@ class StockTickerFetcher:
                     
                     filtered_tickers.append(symbol)
             
-            logging.info(f"Filtered NASDAQ: {len(filtered_tickers)} stocks")
+            logger.info(f"Filtered NASDAQ: {len(filtered_tickers)} stocks")
             
             return filtered_tickers[:200]
             
         except Exception as e:
-            logging.error(f"Failed to fetch NASDAQ: {e}")
+            logger.error(f"Failed to fetch NASDAQ: {e}")
             return []
 
     def get_stock_list(self, sp500=True, nasdaq=True):
@@ -86,19 +86,19 @@ class StockTickerFetcher:
         
         # Combine and deduplicate
         combined = sorted(list(set(SP500 + NASDAQ)))
-        logging.info(f"Total unique tickers: {len(combined)}")
+        logger.info(f"Total unique tickers: {len(combined)}")
 
         return combined
 
     def save_stock_list(self, sp500=True, nasdaq=True):
         """Save comprehensive stock list to file"""
         
-        logging.info("Generating stock list...")
+        logger.info("Generating stock list...")
         
         # Use comprehensive hardcoded list
         stocks = self.get_stock_list(sp500, nasdaq)
         
-        logging.info(f"Using {len(stocks)} stocks from curated list")
+        logger.info(f"Using {len(stocks)} stocks from curated list")
         
         # Save to file (ensure directory exists)
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
@@ -107,6 +107,6 @@ class StockTickerFetcher:
             for ticker in stocks:
                 f.write(f"{ticker}\n")
         
-        logging.info(f"Saved {len(stocks)} tickers to {self.file_path}")
+        logger.info(f"Saved {len(stocks)} tickers to {self.file_path}")
         
         return stocks

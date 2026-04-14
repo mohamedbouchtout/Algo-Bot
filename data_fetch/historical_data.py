@@ -5,11 +5,10 @@ Gets stock historical data from IB and stock list
 import logging
 from ib_insync import *
 from typing import Dict, List, Optional
-import os
 import pandas as pd
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class StockDataFetcher:
     def __init__(self, ib, config, params):
@@ -42,5 +41,5 @@ class StockDataFetcher:
             return df
             
         except Exception as e:
-            logging.warning(f"Failed to get data for {symbol}: {e}")
+            logger.warning(f"Failed to get data for {symbol}: {e}")
             return None

@@ -5,7 +5,7 @@ Risk management: position sizing, cash reserves, max positions
 import logging
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class RiskManager:
     def __init__(self, config, params):
@@ -16,7 +16,7 @@ class RiskManager:
         """Check if we can take a new trade"""
         # Check cash reserve
         if invested_amount >= account_value * self.params['risk_management']['max_investment_pct']:
-            logging.warning(
+            logger.warning(
                 f"Cannot take new trade - cash reserve requirement not met "
                 f"(${invested_amount:,.2f} invested / ${account_value:,.2f} account value)"
             )
@@ -24,7 +24,7 @@ class RiskManager:
         
         # Check max positions
         if num_positions >= self.params['risk_management']['max_positions']:
-            logging.warning(
+            logger.warning(
                 f"Cannot take new trade - max positions limit reached "
                 f"({num_positions} positions / {self.params['risk_management']['max_positions']} max)"
             )

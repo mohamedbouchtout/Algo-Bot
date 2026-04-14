@@ -13,7 +13,7 @@ from strategy.retest_200ma.indicators import TrendIndicator
 from utils.alerts import AlertManager
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class OrderManager:
     def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, config, params):
@@ -26,7 +26,7 @@ class OrderManager:
 
     def scan_stocks(self, stock_list: list[str]):
         """Scan all stocks for trading signals"""
-        logging.info(f"Scanning {len(stock_list)} stocks...")
+        logger.info(f"Scanning {len(stock_list)} stocks...")
 
         for symbol in stock_list:
             # Skip if we already have a position
@@ -34,7 +34,7 @@ class OrderManager:
                 continue
             
             # Get historical data
-            logging.info(f"Testing {symbol}...")
+            logger.info(f"Testing {symbol}...")
             df = self.stock_data.get_historical_data(symbol)
             
             if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
@@ -45,13 +45,13 @@ class OrderManager:
             signal = indicator_200ma.detect_breakout_and_retest()
             
             if signal:
-                logging.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}, "
+                logger.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}, "
                         f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
                         f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
                 
                 self.execute_signal(signal)  # Execute immediately for each signal
             else:
-                logging.info(f"No signal found for {symbol}")
+                logger.info(f"No signal found for {symbol}")
             
             # Small delay to avoid rate limiting
             self.ib.sleep(1)
@@ -82,16 +82,16 @@ class OrderManager:
         available_to_invest = max_investment_allowed - invested_amount
         invested_pct = (invested_amount / net_liq * 100) if net_liq > 0 else 0
         
-        logging.info(f"Account Summary:")
-        logging.info(f"  Net Liquidation: ${net_liq:,.2f}")
-        logging.info(f"  Cash Balance: ${cash_balance:,.2f}")
-        logging.info(f"  Currently Invested: ${invested_amount:,.2f} ({invested_pct:.1f}%)")
-        logging.info(f"  Max Investment Allowed (70%): ${max_investment_allowed:,.2f}")
-        logging.info(f"  Available to Invest: ${available_to_invest:,.2f}")
+        logger.info(f"Account Summary:")
+        logger.info(f"  Net Liquidation: ${net_liq:,.2f}")
+        logger.info(f"  Cash Balance: ${cash_balance:,.2f}")
+        logger.info(f"  Currently Invested: ${invested_amount:,.2f} ({invested_pct:.1f}%)")
+        logger.info(f"  Max Investment Allowed (70%): ${max_investment_allowed:,.2f}")
+        logger.info(f"  Available to Invest: ${available_to_invest:,.2f}")
         
         # Check if we're already at max investment
         if available_to_invest <= 0:
-            logging.warning(
+            logger.warning(
                 f"Cannot take new trades - already at max investment "
                 f"(${invested_amount:,.2f} / ${max_investment_allowed:,.2f})"
             )
@@ -111,7 +111,7 @@ class OrderManager:
             
             self.place_order(signal, shares)
         else:
-            logging.warning(f"Position size too small for {signal['symbol']}")
+            logger.warning(f"Position size too small for {signal['symbol']}")
 
     def place_order(self, signal: Dict, shares: int):
         """Place order based on signal"""
@@ -134,7 +134,7 @@ class OrderManager:
                 order.tif = 'DAY'  # Day order
                 order.outsideRth = False  # Don't allow outside regular trading hours
                 trade = self.ib.placeOrder(contract, order)
-                logging.info(f"Order placed: {trade}")
+                logger.info(f"Order placed: {trade}")
             
             # Track position
             entry_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -147,7 +147,7 @@ class OrderManager:
             # Save to JSON with proper serialization
             self.position_manager.add_position(symbol, signal, shares, entry_time)
             
-            logging.info(f"Entered {signal['type']} position in {symbol}: "
+            logger.info(f"Entered {signal['type']} position in {symbol}: "
                         f"{shares} shares @ ${signal['entry']:.2f}, "
                         f"Stop: ${signal['stop']:.2f}, Target: ${signal['target']:.2f}")
             
@@ -155,4 +155,4 @@ class OrderManager:
             self.alert_manager.alert_trade_entry(signal)
 
         except Exception as e:
-            logging.error(f"Failed to place order for {signal['symbol']}: {e}")
+            logger.error(f"Failed to place order for {signal['symbol']}: {e}")

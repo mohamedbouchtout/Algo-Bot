@@ -10,7 +10,7 @@ from typing import Dict
 from utils.alerts import AlertManager
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class PositionManager:
     def __init__(self, ib, alert_manager: AlertManager, config, params):
@@ -37,7 +37,7 @@ class PositionManager:
                 position_info = self.active_positions[symbol]
                 
                 # Log the closed position
-                logging.info(
+                logger.info(
                     f"Position closed: {symbol} ({position_info['signal']['type']}) - "
                     f"Removing from active positions"
                 )
@@ -59,16 +59,16 @@ class PositionManager:
         
         # Log summary
         if closed_positions:
-            logging.info(f"Removed {len(closed_positions)} closed positions: {closed_positions}")
+            logger.info(f"Removed {len(closed_positions)} closed positions: {closed_positions}")
 
         # Log currently active positions
         if self.active_positions:
-            logging.info(f"Active positions: {len(self.active_positions)} stocks")
+            logger.info(f"Active positions: {len(self.active_positions)} stocks")
             for symbol, info in self.active_positions.items():
                 # Find the position in IB data for P&L info
                 ib_pos = next((p for p in ib_positions if p.contract.symbol == symbol), None)
                 if ib_pos:
-                    logging.info(
+                    logger.info(
                         f"  {symbol}: {info['signal']['type']}, "
                         f"Qty: {ib_pos.position}, "
                         f"Avg Cost: ${ib_pos.avgCost:.2f}, "
@@ -76,20 +76,20 @@ class PositionManager:
                         f"P&L: ${ib_pos.unrealizedPNL:.2f}"
                     )
         else:
-            logging.info("No active positions")
+            logger.info("No active positions")
 
     def load_positions(self):
         """Load positions from JSON and sync with IB"""
         try:
             if not os.path.exists(self.file_path):
-                logging.info("No positions.json file found - starting fresh")
+                logger.info("No positions.json file found - starting fresh")
                 return {}
             
             with open(self.file_path, 'r') as file:
                 data = json.load(file)
             
             if not data:
-                logging.info("positions.json is empty - starting fresh")
+                logger.info("positions.json is empty - starting fresh")
                 return {}
             
             # Get actual IB positions to verify
@@ -130,12 +130,12 @@ class PositionManager:
                     }
                     
                     loaded_count += 1
-                    logging.info(f"Loaded position from JSON: {symbol} ({position_data['type']})")
+                    logger.info(f"Loaded position from JSON: {symbol} ({position_data['type']})")
                 else:
-                    logging.warning(f"Position {symbol} in JSON but not in IB - removing from JSON")
+                    logger.warning(f"Position {symbol} in JSON but not in IB - removing from JSON")
                     symbols_to_remove.append(symbol)
             
-            logging.info(f"Loaded {loaded_count} positions from positions.json")
+            logger.info(f"Loaded {loaded_count} positions from positions.json")
 
             # Now safe to remove
             if symbols_to_remove:
@@ -145,7 +145,7 @@ class PositionManager:
                     json.dump(data, file, indent=4)
             
         except Exception as e:
-            logging.error(f"Failed to load positions from JSON: {e}")
+            logger.error(f"Failed to load positions from JSON: {e}")
     
     def add_position(self, symbol: str, signal: Dict, shares: int, entry_time: str):
         """Add new position to tracking"""
@@ -187,10 +187,10 @@ class PositionManager:
             with open(self.file_path, 'w') as file:
                 json.dump(data, file, indent=4)
             
-            logging.debug(f"Saved position {symbol} to positions.json")
+            logger.debug(f"Saved position {symbol} to positions.json")
             
         except Exception as e:
-            logging.error(f"Failed to save position to JSON: {e}")
+            logger.error(f"Failed to save position to JSON: {e}")
 
     
     def remove_position(self, symbol: str):
@@ -208,12 +208,12 @@ class PositionManager:
                 with open(self.file_path, 'w') as file:
                     json.dump(data, file, indent=4)
                 
-                logging.debug(f"Removed position {symbol} from positions.json")
+                logger.debug(f"Removed position {symbol} from positions.json")
             else:
-                logging.warning(f"{symbol} not found in positions.json for removal")
+                logger.warning(f"{symbol} not found in positions.json for removal")
             
         except Exception as e:
-            logging.error(f"Failed to remove position from JSON: {e}")
+            logger.error(f"Failed to remove position from JSON: {e}")
     
     def get_position_count(self) -> int:
         """Get number of active positions"""

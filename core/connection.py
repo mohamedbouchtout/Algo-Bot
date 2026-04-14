@@ -10,7 +10,7 @@ from execution.position_manager import PositionManager
 from utils.alerts import AlertManager
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class ConnectionManager:
     def __init__(self, ib, position_manager: PositionManager, alert_manager: AlertManager, config, params):
@@ -28,14 +28,14 @@ class ConnectionManager:
         """Connect to Interactive Brokers"""
         for port in self.ports:
             try:
-                logging.info(f"Attempting connection to {self.host}:{port}...")
+                logger.info(f"Attempting connection to {self.host}:{port}...")
                 
                 # Try to connect
                 self.ib.connect(self.host, port, clientId=self.client_id)
                 self.port = port  # Store the successful port
                 self.alert_manager.alert_bot_started()  # Alert that bot has started successfully
                 
-                logging.info(f"Connected to IB at {self.host}:{port}")
+                logger.info(f"Connected to IB at {self.host}:{port}")
                 
                 # Set market data type
                 self.ib.reqMarketDataType(3)  # Delayed/free data
@@ -46,25 +46,25 @@ class ConnectionManager:
                 return True
                 
             except ConnectionRefusedError:
-                logging.warning(f"Connection refused on port {port}, trying next...")
+                logger.warning(f"Connection refused on port {port}, trying next...")
                 continue
             except Exception as e:
-                logging.error(f"Connection failed on port {port}: {e}")
+                logger.error(f"Connection failed on port {port}: {e}")
                 continue
         
         # If we get here, all ports failed
-        logging.error(f"Failed to connect to any port: {self.ports}")
-        logging.error("Make sure TWS or IB Gateway is running with API enabled")
+        logger.error(f"Failed to connect to any port: {self.ports}")
+        logger.error("Make sure TWS or IB Gateway is running with API enabled")
         return False
     
     def disconnect(self):
         """Disconnect from Interactive Brokers"""
         self.ib.disconnect()
-        logging.info("Disconnected from IB")
+        logger.info("Disconnected from IB")
 
     def restart_bot(self):
         """Restart the bot to apply updates"""
-        logging.info("Restarting bot to apply updates...")
+        logger.info("Restarting bot to apply updates...")
         
         # Disconnect cleanly
         self.disconnect()
@@ -76,13 +76,13 @@ class ConnectionManager:
     def ensure_connected(self) -> bool:
         """Ensure IB connection is active, reconnect if needed"""
         if not self.ib.isConnected():
-            logging.warning("IB connection lost. Reconnecting...")
+            logger.warning("IB connection lost. Reconnecting...")
             try:
                 self.ib.connect(self.host, self.port, clientId=self.client_id)
                 self.ib.reqMarketDataType(3)
-                logging.info("Reconnected to IB")
+                logger.info("Reconnected to IB")
                 return True
             except Exception as e:
-                logging.error(f"Reconnection failed: {e}")
+                logger.error(f"Reconnection failed: {e}")
                 return False
         return True
