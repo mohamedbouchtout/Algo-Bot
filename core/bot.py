@@ -18,18 +18,6 @@ from utils.git_manager import GitManager
 from utils.alerts import AlertManager
 from utils.logger import setup_logger
 
-# # Setup logging
-# now = datetime.now()
-# os.makedirs('data/bot_logs', exist_ok=True)
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format='%(asctime)s - %(levelname)s - %(message)s',
-#     handlers=[
-#         logging.FileHandler(f'data/bot_logs/trading_bot_{now.month}-{now.day}-{now.year}_{now.hour}-{now.minute}.log'),
-#         logging.StreamHandler()
-#     ]
-# )
-
 class TradingBot:
     def __init__(self):
         self.ib = IB()
