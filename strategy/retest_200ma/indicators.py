@@ -10,7 +10,7 @@ from strategy.retest_200ma.validators import TrendValidator
 from strategy.retest_200ma.trend_detector import TrendDetector
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class TrendIndicator:
     def __init__(self, df: pd.DataFrame, config, params):

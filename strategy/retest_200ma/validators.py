@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class TrendValidator:
     def __init__(self, df: pd.DataFrame, config, params):

@@ -14,7 +14,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import Dict, Optional
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class AlertManager:
     def __init__(self, config: dict, params: dict):

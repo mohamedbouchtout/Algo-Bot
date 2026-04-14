@@ -8,7 +8,8 @@ data/performance/*
 
 # Keep directory structure
 !data/.gitkeep
-!data/logs/.gitkeep
+!data/bot_logs/.gitkeep
+!data/test_logs/.gitkeep
 !data/performance/.gitkeep
 
 # Python
