@@ -10,7 +10,7 @@ from datetime import datetime
 from core.connection import ConnectionManager
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class GitManager:
     def __init__(self, ib, connection_manager: ConnectionManager, config, params):
@@ -20,21 +20,21 @@ class GitManager:
         self.params = params
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    def git(self, last_git_commit: datetime) -> datetime:
+    def git(self, last_git_check: datetime) -> datetime:
         """Commit and push changes to git if interval has passed"""
         # Only commit once per hour
-        if (datetime.now() - last_git_commit).total_seconds() > self.config['git']['commit_interval']:
-            self.git_commit_and_push("Auto-commit: Trading bot update")
-            last_git_commit = datetime.now()
+        # if (datetime.now() - last_git_check).total_seconds() > self.config['git']['commit_interval']:
+        #     self.git_commit_and_push("Auto-commit: Trading bot update")
+        #     last_git_check = datetime.now()
         
         # Check for updates only once per day and after market close
         if datetime.now().hour == 16 and datetime.now().minute < 20:  # After market close
             if self.check_for_updates():
-                logging.info("Updating and restarting bot to apply new changes...")
+                self.logger.info("Updating and restarting bot to apply new changes...")
                 if self.pull_updates():
                     self.connection_manager.restart_bot()
 
-        return last_git_commit
+        return last_git_check
 
     def check_for_updates(self) -> bool:
         """Check if remote has new commits"""
@@ -54,20 +54,20 @@ class GitManager:
             commits_behind = int(result.stdout.strip())
             
             if commits_behind > 0:
-                logging.info(f"{commits_behind} new commit(s) available")
+                logger.info(f"{commits_behind} new commit(s) available")
                 return True
             
             return False
             
         except Exception as e:
-            logging.warning(f"Could not check for updates: {e}")
+            logger.warning(f"Could not check for updates: {e}")
             return False
     
     def pull_updates(self) -> bool:
         """Pull latest changes from git"""
         try:
             # Fetch latest
-            logging.info("Pulling latest changes...")
+            logger.info("Pulling latest changes...")
 
             subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True)
             result = subprocess.run(
@@ -215,7 +215,7 @@ class GitManager:
             )
             
             if not status.stdout.strip():
-                logging.debug("No changes to commit")
+                logger.debug("No changes to commit")
                 return True
 
             # Commit with message
@@ -224,9 +224,9 @@ class GitManager:
             # Push to remote
             subprocess.run(['git', 'push'], cwd=self.base_dir, check=True)
             
-            logging.info(f"Successfully pushed: {message}")
+            logger.info(f"Successfully pushed: {message}")
             return True
             
         except subprocess.CalledProcessError as e:
-            logging.error(f"Git error: {e}")
+            logger.error(f"Git error: {e}")
             return False

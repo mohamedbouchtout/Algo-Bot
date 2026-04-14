@@ -7,7 +7,7 @@ from datetime import datetime, time
 import pandas_market_calendars as mcal
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class Scheduler:
     def __init__(self):

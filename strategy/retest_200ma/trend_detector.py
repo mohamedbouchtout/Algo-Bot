@@ -9,7 +9,7 @@ from typing import Optional, Dict
 from strategy.retest_200ma.validators import TrendValidator
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class TrendDetector:
     def __init__(self, df: pd.DataFrame, config, params):
@@ -38,7 +38,7 @@ class TrendDetector:
             trend_validator = TrendValidator(self.df, self.config, self.params)
             if not trend_validator.is_ma_trending_up_or_flat(ma200, i):
                 ma_slope = trend_validator.calculate_ma_slope(ma200, i)
-                logging.debug(
+                logger.debug(
                     f"Skipping long pattern at day {i} - MA trending down "
                     f"(slope: {ma_slope:.4f})"
                 )
@@ -60,7 +60,7 @@ class TrendDetector:
             
             # Breakout should have at least 1.5x average volume
             if volume_ratio < self.params['strategy_retest_200ma']['min_breakout_volume']:
-                logging.debug(f"Breakout volume too low: {volume_ratio:.2f}x average")
+                logger.debug(f"Breakout volume too low: {volume_ratio:.2f}x average")
                 continue
 
             # Breakout strength
@@ -87,7 +87,7 @@ class TrendDetector:
                     # Retest should have LOWER volume than breakout (weak selling pressure)
                     # Ideally below average volume (< 1.0x) or at least less than breakout
                     if retest_volume_ratio > volume_ratio * self.params['strategy_retest_200ma']['max_retest_volume_ratio'] or retest_volume_ratio > self.params['strategy_retest_200ma']['max_retest_volume_absolute']:
-                        logging.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakout {volume_ratio:.2f}x")
+                        logger.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakout {volume_ratio:.2f}x")
                         continue
 
                     # Step 3: Check if price bounced up (current price above retest low)
@@ -120,7 +120,7 @@ class TrendDetector:
                     # Calculate MA slope for logging
                     ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
                     
-                    logging.info(f"Long pattern detected on {DF['symbol'].iloc[0]}")
+                    logger.info(f"Long pattern detected on {DF['symbol'].iloc[0]}")
                     return {
                         'type': 'LONG',
                         'symbol': DF['symbol'].iloc[0],
@@ -164,7 +164,7 @@ class TrendDetector:
             trend_validator = TrendValidator(self.df, self.config, self.params)
             if not trend_validator.is_ma_trending_down_or_flat(ma200, i):
                 ma_slope = trend_validator.calculate_ma_slope(ma200, i)
-                logging.debug(
+                logger.debug(
                     f"Skipping short pattern at day {i} - MA trending up "
                     f"(slope: {ma_slope:.4f})"
                 )
@@ -186,7 +186,7 @@ class TrendDetector:
             
             # Breakout should have at least 1.5x average volume
             if volume_ratio < self.params['strategy_retest_200ma']['min_breakout_volume']:
-                logging.debug(f"Breakout volume too low: {volume_ratio:.2f}x average")
+                logger.debug(f"Breakout volume too low: {volume_ratio:.2f}x average")
                 continue
 
             # Breakdown strength
@@ -212,7 +212,7 @@ class TrendDetector:
                     
                     # Retest should have LOWER volume than breakdown (weak buying pressure)
                     if retest_volume_ratio > volume_ratio * self.params['strategy_retest_200ma']['max_retest_volume_ratio'] or retest_volume_ratio > self.params['strategy_retest_200ma']['max_retest_volume_absolute']:
-                        logging.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakdown {volume_ratio:.2f}x")
+                        logger.debug(f"Retest volume too high: {retest_volume_ratio:.2f}x vs breakdown {volume_ratio:.2f}x")
                         continue
 
                     # Step 3: Check if price bounced down (current price below retest high)
@@ -248,7 +248,7 @@ class TrendDetector:
                         # Calculate MA slope
                         ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
                         
-                        logging.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
+                        logger.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
                         return {
                             'type': 'SHORT',
                             'symbol': DF['symbol'].iloc[0],

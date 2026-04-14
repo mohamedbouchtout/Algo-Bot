@@ -13,7 +13,7 @@ A sophisticated automated trading bot that scans S&P 500 and NASDAQ stocks for 2
 - **Email Alerts**: Automated notifications for trades, errors, and daily summaries
 - **Git Integration**: Auto-updates from repository during off-hours
 - **Environment Configuration**: Dev/Prod configs based on Git branch
-- **Comprehensive Logging**: Detailed logs with timestamps
+- **Comprehensive Logging**: Detailed logs with timestamps and standardized logger usage across all modules
 - **Paper Trading Ready**: Configured for IBKR paper trading
 
 ## 📁 Project Structure
