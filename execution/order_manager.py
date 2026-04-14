@@ -13,7 +13,7 @@ from strategy.retest_200ma.indicators import TrendIndicator
 from utils.alerts import AlertManager
 
 # Setup logging
-logger = logger.getLogger()
+logger = logging.getLogger()
 
 class OrderManager:
     def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, config, params):

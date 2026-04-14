@@ -74,9 +74,9 @@ class TradingBot:
         order_manager = OrderManager(self.ib, stock_data, position_manager, alert_manager, self.config, self.params)
         git_manager = GitManager(self.ib, connection_manager, self.config, self.params)
 
-        if not connection_manager.connect():
-            self.logger.error("Failed to connect. Exiting.")
-            return
+        while not connection_manager.connect():
+            self.logger.warning("Cannot connect to IB - will retry in 1 minute")
+            self.ib.sleep(60)  # 1 minute
          
         last_git_check = datetime.now()
 

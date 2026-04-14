@@ -5,7 +5,7 @@ Risk management: position sizing, cash reserves, max positions
 import logging
 
 # Setup logging
-logger = logger.getLogger()
+logger = logging.getLogger()
 
 class RiskManager:
     def __init__(self, config, params):
