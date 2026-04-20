@@ -24,6 +24,7 @@ venv/
 # IDE
 .vscode/
 .idea/
+.vs/
 *.swp
 
 # OS

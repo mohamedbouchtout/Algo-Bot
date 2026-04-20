@@ -13,10 +13,12 @@ import yaml
 from itertools import product
 import os
 import pandas as pd
-from datasets.bas_data import get_everything
-from datasets.bas_data import get_everything_2
-from datasets.bas_data import get_permute_everything
+# BAS dataset helpers are only needed when self.small_Big is True (legacy experiments).
+# Import them lazily inside train() so this module can be used with other datasets
+# (e.g. stock data) without requiring the datasets package to be importable.
+
 '''
+
 class monitoring():
     def reconstruction_cross_e():4 
     
@@ -26,7 +28,7 @@ class monitoring():
 '''
 
 class RBM():
-    def __init__(self, visible_dim, hidden_dim, number_of_epochs, picture_shape, batch_size, initial_temperature = 1,temps = [1],annealing_decay = 0, training_algorithm='cd', initializer='glorot', k=1, n_test_samples=500,small_Big=False, NAME='RBM',l_1 = -1E-6,non_parallel = False, initial_gamma=2.0, gamma_decay=0.05):
+    def __init__(self, visible_dim, hidden_dim, number_of_epochs, picture_shape, batch_size, initial_temperature = 1, temps = [1], annealing_decay = 0, training_algorithm='cd', initializer='glorot', k=1, n_test_samples=500, small_Big=False, NAME='RBM', l_1 = -1E-6, non_parallel = False, initial_gamma=2.0, gamma_decay=0.05):
         self.initial_temperature = initial_temperature
         self.annealing_decay = annealing_decay
         self.non_parallel = non_parallel
@@ -233,7 +235,7 @@ class RBM():
         """
         Perform contrastive divergence given a data point.
 
-        :param data_point: array, shape(visible layer)
+        :param data_point: array, shape(visible_layer)
                            data point sampled from the batch
 
         :param L2_l: float, lambda for L2 regularization, default = 0 so no regularization performed
@@ -650,13 +652,14 @@ class RBM():
         print('Start training...')
         self.temp_evo=[self.initial_temperature]
         if self.small_Big:
+            # Lazy import: only needed for the BAS small/big experiment mode
+            from datasets.bas_data import get_everything_2
             v_all = get_everything_2(self._v_dim)
             print(self._v_dim)
             h_all = get_everything_2(self._h_dim)
             print(self._h_dim)
             print(len(v_all),len(h_all))
-        
-        
+
         
         #x = [i for i in product(range(2), repeat=self._v_dim)]
         #conf = np.array(x)
@@ -749,7 +752,7 @@ class RBM():
             #         tf.summary.scalar('Temperature',Temp,step=epoch)
             #         tf.summary.scalar('Free Energy', free_energy, step = epoch)
             #     tf.summary.scalar('rec_error', rec_error, step = epoch)
-            #     tf.summary.scalar('squared_error', sq_error, step = epoch)
+            #     tf.summary.scalar('squared_error', q_error, step = epoch)
             #     tf.summary.scalar('Pseudo log likelihood', pseudo_log, step=epoch)
             #     tf.summary.scalar('Binary cross entropy', recon_c_e, step=epoch)
             #     #tf.summary.scalar('inverse KL divergence', DKL_inv, step=epoch)
