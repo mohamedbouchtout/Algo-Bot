@@ -57,6 +57,9 @@ Algo-Bot/
 ├── ai_modules/                        # Low-level AI model implementations
 │   ├── rbm/
 │   │   ├── my_RBM_tf2_test.py         # Restricted Boltzmann Machine (TensorFlow 2)
+│   │   ├── results/                   # RBM training artifacts (auto-created when AI is trained)
+│   │   │   ├── logs/                  # TensorBoard event files
+│   │   │   └── models/                # Per-epoch RBM weights (.h5)
 │   │   └── ...                        # BAS dataset helpers, sampling utilities
 │   └── cnn/
 │       └── convolution_neural_network.py  # 1-D CNN (PyTorch) with RBM feature concat
@@ -70,9 +73,6 @@ Algo-Bot/
 │   ├── bot_logs/         # Log files for runs
 │   ├── test_logs/        # Log files for test runs
 │   └── performance/      # Performance data
-├── results/              # RBM training artifacts (auto-created when AI is trained)
-│   ├── logs/             # TensorBoard event files
-│   └── models/           # Per-epoch RBM weights (.h5)
 └── requirements.txt      # Python dependencies
 ```
 
