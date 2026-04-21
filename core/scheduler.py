@@ -13,6 +13,10 @@ class Scheduler:
     def __init__(self):
         pass
 
+    def is_weekend(self) -> bool:
+        """Check if the current day is Saturday or Sunday."""
+        return datetime.now().weekday() >= 5  # 5 = Saturday, 6 = Sunday
+
     def is_market_hours(self) -> bool:
         """Check if current time is during market hours (9:30 AM - 4:00 PM EST)"""
         now = datetime.now()

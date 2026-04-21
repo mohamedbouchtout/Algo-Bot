@@ -4,7 +4,7 @@ Coordinates all modules
 """
 
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import json
 from ib_insync import *
@@ -17,13 +17,17 @@ from execution.position_manager import PositionManager
 from utils.git_manager import GitManager
 from utils.alerts import AlertManager
 from utils.logger import setup_logger
+from strategy.ai_analysis.ai_analyzer import AIAnalyzer
 
 class TradingBot:
+    TRAIN_INTERVAL = timedelta(days=6)
+
     def __init__(self):
         self.ib = IB()
         self.config = self.load_config()
         self.params = self.load_params()
         self.logger = setup_logger(self.config)
+        self.last_train_time: datetime | None = None
 
     def load_config(self):
         """Load configuration from JSON file"""
@@ -61,6 +65,37 @@ class TradingBot:
             self.logger.error(f"Failed to load parameters: {e}")
             raise
 
+    def should_retrain(self, scheduler: Scheduler) -> bool:
+        # Cold start — no model exists, train regardless of day
+        if self.last_train_time is None:
+            return True
+
+        # Model exists — only refresh on weekends, and only if it's stale
+        if not scheduler.is_weekend():
+            return False
+        return datetime.now() - self.last_train_time >= self.TRAIN_INTERVAL
+
+    def train_modules(self, ai_analyzer: AIAnalyzer, stock_fetcher: StockTickerFetcher):
+        """Run a full pooled retrain of the RBM + CNN on the current ticker universe."""
+        try:
+            self.logger.info("Starting AI retrain...")
+            ai_analyzer.reset_dataset()
+            added = 0
+            for ticker in stock_fetcher.stock_list:
+                if ai_analyzer.add_ticker(ticker):
+                    added += 1
+                self.ib.sleep(1)
+
+            if added < 2:
+                self.logger.warning(f"Only {added} tickers accumulated — skipping training")
+                return
+
+            ai_analyzer.finalize_training(val_split=0.2)
+            self.last_train_time = datetime.now()
+            self.logger.info(f"AI retrain finished: {added} tickers")
+        except Exception as e:
+            self.logger.error(f"AI training failed; bot will continue with previous model: {e}")
+
     def run(self):
         """Main bot loop"""
         self.logger.info("Starting trading bot...")
@@ -73,18 +108,23 @@ class TradingBot:
         connection_manager = ConnectionManager(self.ib, position_manager, alert_manager, self.config, self.params)
         order_manager = OrderManager(self.ib, stock_data, position_manager, alert_manager, self.config, self.params)
         git_manager = GitManager(self.ib, connection_manager, self.config, self.params)
-
-        while not connection_manager.connect():
-            self.logger.warning("Cannot connect to IB - will retry in 1 minute")
-            self.ib.sleep(60)  # 1 minute
-         
-        last_git_check = datetime.now()
+        ai_analyzer = AIAnalyzer(stock_data)
 
         try:
+            while not connection_manager.connect():
+                self.logger.warning("Cannot connect to IB - will retry in 1 minute")
+                self.ib.sleep(60)  # 1 minute
+        
+            # Cold-start training if no model exists
+            if self.should_retrain(scheduler):
+                self.train_modules(ai_analyzer, stock_fetcher)
+
+            last_git_check = datetime.now()
+
             while True:
                 if scheduler.is_market_hours() and connection_manager.ensure_connected():
                     self.logger.info(f"Market is open. Scanning for signals...")
-                    
+
                     # Scan and execute new signals
                     order_manager.scan_stocks(stock_fetcher.stock_list)
                     
@@ -109,6 +149,11 @@ class TradingBot:
                 else:
                     self.logger.info(f"Market is closed. Next check in 30 minutes...")
                     last_git_check = git_manager.git(last_git_check)  # Update last_git_check if it was changed
+
+                    # Train AI modules on weekends when market is closed
+                    if self.should_retrain(scheduler):
+                        self.train_modules(ai_analyzer, stock_fetcher)
+
                     self.ib.sleep(1800)  # 30 minutes
                     
         except KeyboardInterrupt:
