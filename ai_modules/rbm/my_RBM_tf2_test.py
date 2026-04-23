@@ -148,18 +148,8 @@ class RBM():
     
     #annealing control function!!!!
     def sigmoid_Temp(self,E):
-        # Beta = (1/(self.initial_temperature*np.exp(-self.annealing_decay*self.epoch)*self.boltzmann))
-        # return tf.sigmoid(E*Beta)
-    
-        # Transverse field Gamma anneals from G0 → 0 just like T anneals
-        Gamma = self.initial_gamma * np.exp(-self.gamma_decay * self.epoch)
-        Beta  = 1 / (self.initial_temperature * np.exp(-self.annealing_decay * self.epoch) * self.boltzmann)
-        
-        # Quantum-corrected effective field magnitude
-        E_eff = tf.sqrt(tf.square(E) + Gamma**2)
-        
-        # Quantum Boltzmann activation (Benedetti et al. 2016)
-        return 0.5 * (1 + (E / E_eff) * tf.tanh(Beta * E_eff))
+        Beta = (1/(self.initial_temperature*np.exp(-self.annealing_decay*self.epoch)*self.boltzmann))
+        return tf.sigmoid(E*Beta)
     # QUANTUM REPLACEMENT
     def sigmoid_Quantum(self, E):
         # Transverse field Gamma anneals from G0 → 0 just like T anneals
