@@ -39,7 +39,7 @@ class PriceFeatureExtractor:
         Returns
         -------
         DataFrame of the same index with the FEATURE_NAMES columns. NaN rows
-        (from the rolling windows) are left in place — the FeatureBuilder drops
+        (from the rolling windows) are left in place, the FeatureBuilder drops
         them once all extractors have been combined.
         """
         required = {'close', 'high', 'low'}

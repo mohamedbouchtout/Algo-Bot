@@ -8,7 +8,7 @@ Labels
 2 = expected long setup   (forward return >  threshold)
 
 The CNN input is a 1-channel 1-D signal of length `input_length`, which must
-be large enough for two (kernel=5, pool=2) conv/pool stages — i.e. at least
+be large enough for two (kernel=5, pool=2) conv/pool stages, i.e. at least
 roughly 20. The CNN itself computes its internal flatten size from
 `input_length`, so any compatible length works.
 """

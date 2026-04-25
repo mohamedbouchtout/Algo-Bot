@@ -6,87 +6,87 @@
 # Core Trading
 # -------------------------------
 # Interactive Brokers API wrapper
-ib-insync>=0.9.86
+ib-insync==0.9.86
 
 # Data manipulation and analysis
-pandas>=2.1.4
-numpy>=1.26.2
-torch>=2.11.0
-torchvision>=0.26.0
-torchaudio>=2.11.0
+pandas==2.1.4
+numpy==1.26.4
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
 
 # Market calendar (NYSE holidays, trading hours)
-pandas-market-calendars>=4.4.0
+pandas-market-calendars==4.4.0
 
 # -------------------------------
 # Date/Time Handling
 # -------------------------------
 # Timezone support (included with pandas-market-calendars)
-pytz>=2023.3.post1
+pytz==2023.3.post1
 
 # -------------------------------
 # Networking & HTTP
 # -------------------------------
 # For fetching stock lists from APIs/GitHub
-requests>=2.31.0
+requests==2.31.0
 
 # -------------------------------
 # Utilities
 # -------------------------------
 # Better datetime parsing (optional but useful)
-python-dateutil>=2.8.2
+python-dateutil==2.8.2
 
 # -------------------------------
 # AI Analysis Pipeline (RBM + CNN)
 # -------------------------------
 # TensorFlow: backs the Restricted Boltzmann Machine in ai_modules/rbm
-tensorflow>=2.15.0
+tensorflow==2.15.0
 # Progress bars during RBM training
-tqdm>=4.66.0
+tqdm==4.66.0
 # HDF5 model serialization used by the RBM's save_model()
-deepdish>=0.3.7
-h5py>=3.10.0
+deepdish==0.3.7
+h5py==3.10.0
 # Nearest neighbour metrics used in the RBM's KL-divergence evaluation
-scikit-learn>=1.3.0
+scikit-learn==1.3.0
 # YAML config dump during RBM training
-PyYAML>=6.0
+PyYAML==6.0
 # Plotting utilities used by ai_modules/rbm/utils.py
-matplotlib>=3.8.0
-seaborn>=0.13.0
-cmocean>=3.0.3
+matplotlib==3.8.0
+seaborn==0.13.0
+cmocean==3.0.3
 
 # -------------------------------
 # Optional: Notifications
 # -------------------------------
 # Uncomment if you want email alerts
-python-dotenv>=1.0.0
-# sendgrid>=6.11.0
+python-dotenv==1.0.0
+# sendgrid==6.11.0
 
 # Uncomment if you want SMS alerts via Twilio
-# twilio>=8.11.0
+# twilio==8.11.0
 
 # -------------------------------
 # Optional: Advanced Analytics
 # -------------------------------
 # Uncomment for technical indicators library
-# ta-lib>=0.4.28  # Requires TA-Lib C library installed first
-# pandas-ta>=0.3.14b0
+# ta-lib==0.4.28  # Requires TA-Lib C library installed first
+# pandas-ta==0.3.14b0
 
 # Uncomment for backtesting
-# backtrader>=1.9.78.123
+# backtrader==1.9.78.123
 
 # -------------------------------
 # Development & Testing
 # -------------------------------
 # Uncomment for development
-# pytest>=7.4.3
-# pytest-cov>=4.1.0
-# black>=23.12.1
-# flake8>=6.1.0
-# mypy>=1.7.1
+# pytest==7.4.3
+# pytest-cov==4.1.0
+# black==23.12.1
+# flake8==6.1.0
+# mypy==1.7.1
 
 # -------------------------------
 # Production: Process Management
 # -------------------------------
 # Uncomment for running as daemon on server
-# supervisor>=4.2.5
+# supervisor==4.2.5

@@ -26,7 +26,7 @@ class TradingBot:
         self.ib = IB()
         self.config = self.load_config()
         self.params = self.load_params()
-        self.logger = setup_logger(self.config)
+        self.logger = setup_logger(self.config, 'bot_logs', 'trading_bot.log')
         self.last_train_time: datetime | None = None
 
     def load_config(self):
@@ -66,11 +66,11 @@ class TradingBot:
             raise
 
     def should_retrain(self, scheduler: Scheduler) -> bool:
-        # Cold start — no model exists, train regardless of day
+        # Cold start ï¿½ no model exists, train regardless of day
         if self.last_train_time is None:
             return True
 
-        # Model exists — only refresh on weekends, and only if it's stale
+        # Model exists ï¿½ only refresh on weekends, and only if it's stale
         if not scheduler.is_weekend():
             return False
         return datetime.now() - self.last_train_time >= self.TRAIN_INTERVAL
@@ -87,7 +87,7 @@ class TradingBot:
                 self.ib.sleep(1)
 
             if added < 2:
-                self.logger.warning(f"Only {added} tickers accumulated — skipping training")
+                self.logger.warning(f"Only {added} tickers accumulated ï¿½ skipping training")
                 return
 
             ai_analyzer.finalize_training(val_split=0.2)

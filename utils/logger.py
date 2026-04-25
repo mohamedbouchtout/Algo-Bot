@@ -6,16 +6,16 @@ import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 import os
 
-def setup_logger(config):
+def setup_logger(config, folder_name: str, file_name: str):
     """Setup logger with rotation"""
     
     # Get log directory
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    log_dir = os.path.join(project_root, 'data', 'bot_logs')
+    log_dir = os.path.join(project_root, 'data', folder_name)
     os.makedirs(log_dir, exist_ok=True)
     
     # Log file path
-    log_file = os.path.join(log_dir, 'trading_bot.log')
+    log_file = os.path.join(log_dir, file_name)
     
     # Get log level from config
     log_level = config.get('logging', {}).get('level', 'INFO')

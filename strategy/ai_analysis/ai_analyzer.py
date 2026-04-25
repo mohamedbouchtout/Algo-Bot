@@ -9,7 +9,7 @@ Responsibilities
 * Use the trained RBM to produce hidden features for every sample.
 * Train the CNN on (continuous window, RBM features) -> forward-return label.
 * Expose `predict(symbol)` that pulls the latest bars and returns a LONG/FLAT/
-  SHORT classification plus class probabilities — this is the hook that
+  SHORT classification plus class probabilities, this is the hook that
   `order_manager.scan_stocks()` can eventually call.
 
 Two training styles are supported:
@@ -23,7 +23,7 @@ Two training styles are supported:
            analyzer.add_ticker(sym)
        analyzer.finalize_training()
    Fits the same pooled models, but lets the caller drive the per-ticker
-   loop — useful when integrating with an existing scan loop and when you
+   loop, useful when integrating with an existing scan loop and when you
    want to skip / retry individual tickers.
 
 Both styles produce equivalent models; training a model on a single ticker
@@ -132,14 +132,14 @@ class AIAnalyzer:
 
         Returns
         -------
-        rbm_x  : (N, visible_dim) uint8    — binarised windows for the RBM
-        cnn_x  : (N, input_length) float32 — continuous windows for the CNN
-        labels : (N,) int64                — 0/1/2 target classes
-        ids    : (N,) int64                — per-sample ticker index for diagnostics.
+        rbm_x  : (N, visible_dim) uint8     binarised windows for the RBM
+        cnn_x  : (N, input_length) float32  continuous windows for the CNN
+        labels : (N,) int64                 0/1/2 target classes
+        ids    : (N,) int64                 per-sample ticker index for diagnostics.
         """
         if not self._continuous_per_ticker:
             raise RuntimeError(
-                "No tickers in dataset — call add_ticker() (or train(tickers)) first"
+                "No tickers in dataset, call add_ticker() (or train(tickers)) first"
             )
 
         self.feature_builder.fit_bin_edges(self._continuous_per_ticker)

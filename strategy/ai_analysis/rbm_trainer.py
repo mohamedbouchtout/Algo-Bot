@@ -1,7 +1,7 @@
 """
 Wraps the legacy RBM (ai_modules.rbm.my_RBM_tf2_test.RBM) for stock-data training.
 
-The RBM class itself is unchanged — we only supply the {'x_train', 'x_test'}
+The RBM class itself is unchanged, we only supply the {'x_train', 'x_test'}
 dict it expects, derived from binarised stock features, and expose a small
 helper to extract hidden-layer activations as features for the CNN.
 """
@@ -71,7 +71,7 @@ class RBMTrainer:
 
         # RBM does integer sqrt of picture_shape in a few debug plots; give it
         # a sensible square-ish shape even if the vector length isn't a perfect
-        # square — it's purely cosmetic when we don't plot.
+        # square, it's purely cosmetic when we don't plot.
         side = max(1, int(np.ceil(np.sqrt(self.visible_dim))))
         picture_shape = (side, side)
 

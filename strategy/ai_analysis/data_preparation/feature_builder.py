@@ -80,7 +80,7 @@ class FeatureBuilder:
         pooled = pooled.replace([np.inf, -np.inf], np.nan).dropna(how='any')
 
         if pooled.empty:
-            raise ValueError("No clean rows to fit bin edges — check input data")
+            raise ValueError("No clean rows to fit bin edges, check input data")
 
         self.feature_names = list(pooled.columns)
         # n_bits thresholds -> splits the distribution into n_bits+1 buckets.
@@ -122,8 +122,8 @@ class FeatureBuilder:
 
         Returns
         -------
-        rbm_x  : (n_samples, window_size * total_bits) uint8  — for the RBM
-        cnn_x  : (n_samples, window_size * n_features) float32 — continuous, for the CNN
+        rbm_x  : (n_samples, window_size * total_bits) uint8, for the RBM
+        cnn_x  : (n_samples, window_size * n_features) float32, continuous, for the CNN
         labels : (n_samples,) int {0: short, 1: flat, 2: long}  or None
         """
         features = self.build_continuous_features(df)
