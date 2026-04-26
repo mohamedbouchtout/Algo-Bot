@@ -87,7 +87,7 @@ class TradingBot:
                 self.ib.sleep(1)
 
             if added < 2:
-                self.logger.warning(f"Only {added} tickers accumulated � skipping training")
+                self.logger.warning(f"Only {added} tickers accumulated, skipping training")
                 return
 
             ai_analyzer.finalize_training(val_split=0.2)

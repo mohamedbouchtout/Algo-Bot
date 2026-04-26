@@ -65,12 +65,24 @@ class RunTests:
 
     def run(self):
         """Runs all the test classes"""
+        if not self.connection_manager.connect():
+            self.logger.error("Failed to connect. Exiting.")
+            return
 
-        # AI analysis test class
-        test_ai_analysis = TestAIanalysis(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
-        test_ai_analysis.train_modules()
-        test_ai_analysis.predictions()
+        try:
+            # AI analysis test class
+            test_ai_analysis = TestAIanalysis(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
+            test_ai_analysis.train_modules()
+            test_ai_analysis.predictions()
 
-        # 200 MA retest test class
-        test_bot = TestRetest200MA(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
-        test_bot.test_retest_200ma()
+            # 200 MA retest test class
+            test_bot = TestRetest200MA(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
+            test_bot.test_retest_200ma()
+        except KeyboardInterrupt:
+            self.logger.info("Bot stopped by user")
+            self.alert_manager.alert_bot_stopped()
+        except Exception as e:
+            self.logger.error(f"Bot error: {e}")
+            self.alert_manager.alert_error(str(e), "Unexpected bot error thrown.")
+        finally:
+            self.connection_manager.disconnect()

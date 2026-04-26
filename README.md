@@ -63,12 +63,15 @@ Algo-Bot/
 │   │   └── ...                        # BAS dataset helpers, sampling utilities
 │   └── cnn/
 │       └── convolution_neural_network.py  # 1-D CNN (PyTorch) with RBM feature concat
+├── results/                   # RBM training artifacts (auto-created when AI is trained)
+│   ├── logs/                  # TensorBoard event files
+│   └── models/                # Per-epoch RBM weights (.h5)
 ├── utils/
 │   ├── alerts.py         # Alert system
 │   ├── git_manager.py    # Git operations
 │   ├── logger.py         # Logging utilities
 │   └── metrics.py        # Performance metrics
-├── tests/                # Unit tests
+├── tests/                # Regression tests
 ├── data/                 # Runtime data storage (auto-created)
 │   ├── bot_logs/         # Log files for runs
 │   ├── test_logs/        # Log files for test runs
@@ -251,7 +254,7 @@ results/
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.10+
 - Interactive Brokers account (paper trading recommended)
 - TWS or IB Gateway installed
 
@@ -437,10 +440,11 @@ Example log output:
 
 ### Run Tests
 ```bash
-python run_tests.py
+python tests_main.py
 ```
 
 ### Test Coverage
+- `test_ai_analysis.py`: Tests data flow of the AI modules
 - `test_position_manager.py`: Position tracking logic
 - `test_retest_200ma.py`: Strategy pattern detection
 - `test_risk_manager.py`: Risk calculation validation

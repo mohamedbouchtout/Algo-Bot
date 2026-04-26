@@ -4,6 +4,14 @@ data/stock_list.txt
 data/bot_logs/*
 data/test_logs/*
 data/performance/*
+results/logs/*
+results/models/*
+results/past_machines.csv
+results/temp_1_3x3_BAS_not_annealed.csv
+ai_modules/rbm/results/logs/*
+ai_modules/rbm/results/models/*
+ai_modules/rbm/results/past_machines.csv
+ai_modules/rbm/results/temp_1_3x3_BAS_not_annealed.csv
 .env
 
 # Keep directory structure
