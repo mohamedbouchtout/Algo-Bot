@@ -10,17 +10,19 @@ from execution.risk_manager import RiskManager
 from execution.position_manager import PositionManager
 from data_fetch.historical_data import StockDataFetcher
 from strategy.retest_200ma.indicators import TrendIndicator
+from strategy.ai_analysis.ai_analyzer import AIAnalyzer
 from utils.alerts import AlertManager
 
 # Setup logging
 logger = logging.getLogger()
 
 class OrderManager:
-    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, config, params):
+    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, ai_analyzer: AIAnalyzer, config, params):
         self.ib = ib
         self.stock_data = stock_data
         self.position_manager = position_manager
         self.alert_manager = alert_manager
+        self.ai_analyzer = ai_analyzer
         self.config = config
         self.params = params
 
@@ -39,11 +41,31 @@ class OrderManager:
             
             if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
                 continue
+
+            # AI predictions
+            try:
+                prediction = self.ai_analyzer.predict(symbol)
+                if prediction is not None and 'probs' in prediction and prediction['class'] in prediction['probs']:
+                    class_type = prediction['class']
+                    if prediction['probs'][class_type] > self.params['ai_analyzer']['confidence_threshold'] and class_type in ['LONG', 'SHORT']:
+                        logger.info(f"AI prediction for {symbol}: {class_type} with confidence {prediction['probs'][class_type]:.2f}")
+
+                        ai_signal = self.ai_analyzer.construct_signal(df, self.params, class_type, prediction['probs'][class_type])
+                        if ai_signal:
+                            self.execute_signal(ai_signal)  # Execute immediately for each signal
+                            self.ib.sleep(1)  # Small delay to avoid rate limiting
+                            continue
+            except RuntimeError as e:
+                logger.warning(f"AI prediction failed for {symbol} (not trained): {e}")
+            except KeyError as e:
+                logger.warning(f"AI prediction data error for {symbol}: {e}")
+            except Exception as e:
+                logger.warning(f"Unexpected AI error for {symbol}: {e}")
             
             # Detect 200 MA pattern
             indicator_200ma = TrendIndicator(df, self.config, self.params)
             signal = indicator_200ma.detect_breakout_and_retest()
-            
+
             if signal:
                 logger.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}, "
                         f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "

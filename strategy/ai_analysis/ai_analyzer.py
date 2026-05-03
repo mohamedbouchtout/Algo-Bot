@@ -245,3 +245,31 @@ class AIAnalyzer:
             'class_id': cls,
             'probs': {self.CLASS_NAMES[i]: float(p) for i, p in enumerate(probs[0])},
         }
+
+    def construct_signal(self, df: pd.DataFrame, params, class_type: str, confidence: float) -> Optional[Dict]:
+        """Construct a trading signal dict based on the most recent prediction."""
+        entry_price = df['close'].iloc[-1]
+        symbol = df['symbol'].iloc[0]
+        target_price = 0
+        stop_loss = 0
+
+        if class_type == 'LONG':
+            stop_loss = df['close'].iloc[-1] * (1 - params['ai_analyzer']['stop_loss_pct'])
+            risk = entry_price - stop_loss
+            target_price = entry_price + (risk * params['ai_analyzer']['risk_reward_ratio'])
+        elif class_type == 'SHORT':
+            stop_loss = df['close'].iloc[-1] * (1 + params['ai_analyzer']['stop_loss_pct'])
+            risk = stop_loss - entry_price
+            target_price = entry_price - (risk * params['ai_analyzer']['risk_reward_ratio'])
+
+        return {
+            'strategy_type': 'ai_analysis',
+            'type': class_type,
+            'symbol': symbol,
+            'entry': entry_price,
+            'stop': stop_loss,
+            'target': target_price,
+            "risk": risk,
+            "reward": risk * params['ai_analyzer']['risk_reward_ratio'],
+            'confidence': confidence
+        }
