@@ -18,7 +18,7 @@
     "ai_analyzer": {
         "confidence_threshold": 0.8,
         "risk_reward_ratio": 2.0,
-        "stop_loss_pct": 0.01
+        "stop_loss_pct": 0.03
     },
     "risk_management": {
         "risk_per_trade_pct": 0.05,

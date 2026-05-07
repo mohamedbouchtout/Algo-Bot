@@ -78,19 +78,20 @@ class PositionManager:
         else:
             logger.info("No active positions")
 
-    def load_positions(self):
+    def load_positions(self) -> Dict:
         """Load positions from JSON and sync with IB"""
+        out: Dict = {}
         try:
             if not os.path.exists(self.file_path):
                 logger.info("No positions.json file found - starting fresh")
-                return {}
+                return out
             
             with open(self.file_path, 'r') as file:
                 data = json.load(file)
             
             if not data:
                 logger.info("positions.json is empty - starting fresh")
-                return {}
+                return out
             
             # Get actual IB positions to verify
             ib_positions = self.ib.positions()
@@ -138,7 +139,7 @@ class PositionManager:
                             'confidence': position_data.get('confidence', 0)
                         }
 
-                    self.active_positions[symbol] = {
+                    out[symbol] = {
                         'signal': signal,
                         'shares': position_data['shares'],
                         'entry_time': position_data['entry_time']
@@ -161,6 +162,7 @@ class PositionManager:
             
         except Exception as e:
             logger.error(f"Failed to load positions from JSON: {e}")
+        return out
     
     def add_position(self, symbol: str, signal: Dict, shares: int, entry_time: str):
         """Add new position to tracking"""

@@ -5,6 +5,7 @@ Place and manage orders
 import logging
 from ib_insync import *
 from typing import Dict
+import time
 from datetime import datetime
 from execution.risk_manager import RiskManager
 from execution.position_manager import PositionManager
@@ -136,44 +137,76 @@ class OrderManager:
             logger.warning(f"Position size too small for {signal['symbol']}")
 
     def place_order(self, signal: Dict, shares: int):
-        """Place order based on signal"""
+        """Place order based on signal, waiting for the entry to actually fill
+        before persisting the position or alerting the user."""
         try:
             symbol = signal['symbol']
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
-            
-            # Create bracket order
-            bracket = self.ib.bracketOrder(
-                action='BUY' if signal['type'] == 'LONG' else 'SELL',
-                quantity=shares,
-                limitPrice=signal['entry'],
-                takeProfitPrice=signal['target'],
-                stopLossPrice=signal['stop']
+
+            # MARKET parent ensures we actually get filled. Children stay as the
+            # stop/target prices from the signal.
+            action = 'BUY' if signal['type'] == 'LONG' else 'SELL'
+            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False,
+                                 transmit=False)
+            take_profit = LimitOrder(
+                'SELL' if action == 'BUY' else 'BUY',
+                shares,
+                signal['target'],
+                tif='GTC',
+                outsideRth=False,
+                parentId=0,            # filled in below
+                transmit=False,
             )
-            
-            # Place the bracket order
-            for order in bracket:
-                order.tif = 'DAY'  # Day order
-                order.outsideRth = False  # Don't allow outside regular trading hours
-                trade = self.ib.placeOrder(contract, order)
-                logger.info(f"Order placed: {trade}")
-            
-            # Track position
+            stop_loss = StopOrder(
+                'SELL' if action == 'BUY' else 'BUY',
+                shares,
+                signal['stop'],
+                tif='GTC',
+                outsideRth=False,
+                parentId=0,
+                transmit=True,         # last child triggers all three
+            )
+
+            # Submit parent first to assign IB an orderId, then chain children
+            parent_trade = self.ib.placeOrder(contract, parent)
+            take_profit.parentId = parent_trade.order.orderId
+            stop_loss.parentId  = parent_trade.order.orderId
+            self.ib.placeOrder(contract, take_profit)
+            self.ib.placeOrder(contract, stop_loss)
+
+            # Wait up to 30 s for the parent to fill.  Yields to the event loop.
+            deadline = time.time() + 30
+            while parent_trade.orderStatus.status not in ('Filled', 'Cancelled', 'ApiCancelled', 'Inactive'):
+                self.ib.waitOnUpdate(timeout=1)
+                if time.time() > deadline:
+                    break
+
+            status = parent_trade.orderStatus.status
+            fill_price = parent_trade.orderStatus.avgFillPrice
+            if status != 'Filled' or fill_price <= 0:
+                logger.warning(
+                    f"{symbol} parent order did NOT fill (status={status}). "
+                    f"Cancelling bracket and skipping persistence."
+                )
+                self.ib.cancelOrder(parent_trade.order)
+                return
+
+            # Use the actual fill price, not the stale signal price
+            signal['entry'] = float(fill_price)
+
             entry_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.position_manager.active_positions[symbol] = {
                 'signal': signal,
                 'shares': shares,
-                'entry_time': entry_time
+                'entry_time': entry_time,
             }
-
-            # Save to JSON with proper serialization
             self.position_manager.add_position(symbol, signal, shares, entry_time)
-            
-            logger.info(f"Entered {signal['type']} position in {symbol}: "
-                        f"{shares} shares @ ${signal['entry']:.2f}, "
-                        f"Stop: ${signal['stop']:.2f}, Target: ${signal['target']:.2f}")
-            
-            # Send email alert for new trade entry
+
+            logger.info(
+                f"FILLED {signal['type']} {symbol}: {shares} sh @ ${fill_price:.2f}, "
+                f"Stop: ${signal['stop']:.2f}, Target: ${signal['target']:.2f}"
+            )
             self.alert_manager.alert_trade_entry(signal)
 
         except Exception as e:

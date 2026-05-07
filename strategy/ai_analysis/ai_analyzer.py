@@ -252,6 +252,7 @@ class AIAnalyzer:
         symbol = df['symbol'].iloc[0]
         target_price = 0
         stop_loss = 0
+        risk = 0
 
         if class_type == 'LONG':
             stop_loss = df['close'].iloc[-1] * (1 - params['ai_analyzer']['stop_loss_pct'])
