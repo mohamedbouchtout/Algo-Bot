@@ -37,14 +37,14 @@ class GitManager:
         return last_git_check
 
     def check_for_updates(self) -> bool:
-        """Check if remote has new commits"""
+        """Check if remote has new commits (only check commits we're behind, not ahead)"""
         try:
             # Fetch latest from remote
             subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True)
             
-            # Compare local and remote
+            # Compare local and remote (HEAD..origin/main only counts commits we're BEHIND on)
             result = subprocess.run(
-                ['git', 'rev-list', f'HEAD...origin/{self.config["git"]["main_branch"]}', '--count'],
+                ['git', 'rev-list', f'HEAD..origin/{self.config["git"]["main_branch"]}', '--count'],
                 cwd=self.base_dir,
                 capture_output=True,
                 text=True,
@@ -64,25 +64,26 @@ class GitManager:
             return False
     
     def pull_updates(self) -> bool:
-        """Pull latest changes from git"""
+        """Pull latest changes from git using rebase to avoid merge commits"""
         try:
             # Fetch latest
             logger.info("Pulling latest changes...")
 
             subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True)
+            # Use rebase instead of merge to avoid creating merge commits
             result = subprocess.run(
-                ['git', 'merge', f'origin/{self.config["git"]["main_branch"]}', '-m', f'Auto-merge from {self.config["git"]["main_branch"]}'],
+                ['git', 'rebase', f'origin/{self.config["git"]["main_branch"]}'],
                 cwd=self.base_dir,
                 capture_output=True,
                 text=True
             )
 
             if result.returncode == 0:
-                logger.info("Merge successful!")
+                logger.info("Rebase successful!")
                 
-                # Push the merge commit
+                # Push the rebased commits
                 subprocess.run(
-                    ['git', 'push'],
+                    ['git', 'push', '--force-with-lease'],  # Use force-with-lease to safely push rebased commits
                     cwd=self.base_dir,
                     check=True,
                     capture_output=True
@@ -91,22 +92,29 @@ class GitManager:
                 return True
             
             else:
-                # Merge conflict detected
-                logger.error(f"Merge conflict:\n{result.stderr}")
+                # Rebase conflict detected
+                logger.error(f"Rebase conflict:\n{result.stderr}")
                 
                 # Try to auto-resolve
                 if self.auto_resolve_conflicts():
                     logger.info("Conflicts auto-resolved")
-                    return True
-                else:
-                    logger.error("Manual intervention required")
-                    return False
+                    # Continue rebase
+                    result = subprocess.run(
+                        ['git', 'rebase', '--continue'],
+                        cwd=self.base_dir,
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        return True
+                logger.error("Manual intervention required")
+                return False
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to merge updates: {e}")
+            logger.error(f"Failed to rebase updates: {e}")
             
-            # Abort merge if it's in progress
+            # Abort rebase if it's in progress
             subprocess.run(
-                ['git', 'merge', '--abort'],
+                ['git', 'rebase', '--abort'],
                 cwd=self.base_dir,
                 check=False
             )
