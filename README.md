@@ -6,6 +6,9 @@ A sophisticated automated trading bot that scans S&P 500 and NASDAQ stocks for 2
 
 - **Automated Pattern Detection**: Scans for 200 MA breakout and retest patterns
 - **Dual Strategy Support**: Long and short positions based on trend direction
+- **AI Analysis Pipeline**: Optional RBM + CNN pipeline that learns features from
+  stock price, volume and technical-indicator windows and predicts LONG / FLAT / SHORT
+  setups per ticker (see the *AI Analysis Pipeline* section below)
 - **Risk Management**: Position sizing, stop losses, take profit targets
 - **IBKR Multi-Port Support**: Tries multiple configured IB ports for robust connection
 - **Bracket Orders**: Automatic entry, stop loss, and take profit orders
@@ -38,16 +41,37 @@ Algo-Bot/
 │   ├── position_manager.py # Position tracking
 │   └── risk_manager.py   # Risk calculation and validation
 ├── strategy/
-│   └── retest_200ma/
-│       ├── indicators.py  # Technical indicators
-│       ├── trend_detector.py # Pattern detection logic
-│       └── validators.py  # Trend validation
+│   ├── retest_200ma/
+│   │   ├── indicators.py      # Technical indicators
+│   │   ├── trend_detector.py  # Pattern detection logic
+│   │   └── validators.py      # Trend validation
+│   └── ai_analysis/           # AI feature pipeline + trainers + orchestrator
+│       ├── data_preparation/
+│       │   ├── price_features.py      # returns, MA distance, daily range
+│       │   ├── volume_features.py     # volume ratios, OBV slope
+│       │   ├── indicator_features.py  # RSI, MACD, Bollinger, ATR, 200MA slope
+│       │   └── feature_builder.py     # combines extractors + thermometer binarisation + sliding windows
+│       ├── rbm_trainer.py             # wraps ai_modules/rbm for stock data
+│       ├── cnn_trainer.py             # wraps ai_modules/cnn for supervised classification
+│       └── ai_analyzer.py             # top-level orchestrator (build_dataset / train / predict)
+├── ai_modules/                        # Low-level AI model implementations
+│   ├── rbm/
+│   │   ├── my_RBM_tf2_test.py         # Restricted Boltzmann Machine (TensorFlow 2)
+│   │   ├── results/                   # RBM training artifacts (auto-created when AI is trained)
+│   │   │   ├── logs/                  # TensorBoard event files
+│   │   │   └── models/                # Per-epoch RBM weights (.h5)
+│   │   └── ...                        # BAS dataset helpers, sampling utilities
+│   └── cnn/
+│       └── convolution_neural_network.py  # 1-D CNN (PyTorch) with RBM feature concat
+├── results/                   # RBM training artifacts (auto-created when AI is trained)
+│   ├── logs/                  # TensorBoard event files
+│   └── models/                # Per-epoch RBM weights (.h5)
 ├── utils/
 │   ├── alerts.py         # Alert system
 │   ├── git_manager.py    # Git operations
 │   ├── logger.py         # Logging utilities
 │   └── metrics.py        # Performance metrics
-├── tests/                # Unit tests
+├── tests/                # Regression tests
 ├── data/                 # Runtime data storage (auto-created)
 │   ├── bot_logs/         # Log files for runs
 │   ├── test_logs/        # Log files for test runs
@@ -79,10 +103,158 @@ The bot implements a 200-day moving average breakout and retest strategy:
 - **Retest Distance**: Within 0.5% of MA
 - **Max Days Since Retest**: 3 days
 
+## 🤖 AI Analysis Pipeline
+
+An optional, decoupled machine learning pipeline that learns recurring patterns
+in stock price / volume / indicator data and produces a per-ticker LONG / FLAT /
+SHORT classification. It is designed as a **companion signal** to the deterministic
+retest_200ma strategy and does **not** place orders on its own.
+
+### Architecture
+
+```
+OHLCV bars (IB)
+    │
+    ▼
+┌──────────────────────────────────────────┐
+│ data_preparation/                        │
+│   PriceFeatureExtractor    (8 features)  │
+│   VolumeFeatureExtractor   (4 features)  │
+│   IndicatorFeatureExtractor(5 features)  │
+└──────────────────────────────────────────┘
+    │                      (continuous)
+    ▼
+FeatureBuilder
+    ├─ fit_bin_edges()   quantile bin edges learned across all tickers
+    ├─ binarize()        thermometer encoding (n_bits per feature)
+    └─ build_windows()   sliding windows of length window_size
+    │
+    ├──────► rbm_x  (N, window_size × 17 × n_bits)  uint8
+    ├──────► cnn_x  (N, window_size × 17)           float32
+    └──────► labels {0: SHORT, 1: FLAT, 2: LONG}    from fwd return
+    │
+    ▼
+┌──────────────────────────────────────────┐
+│ RBMTrainer   (unsupervised)              │
+│   visible units = binarised feature bits │
+│   → hidden activations used as features  │
+└──────────────────────────────────────────┘
+    │                       (hidden_features)
+    ▼
+┌──────────────────────────────────────────┐
+│ CNNTrainer   (supervised, 3-class)       │
+│   input: cnn_x (1-D signal) + RBM feats  │
+│   output: softmax over {SHORT,FLAT,LONG} │
+└──────────────────────────────────────────┘
+    │
+    ▼
+AIAnalyzer.predict(symbol) → {'class', 'probs'}
+```
+
+### Feature Set (17 scale-free features per bar)
+
+| Group | Features |
+|-------|----------|
+| **Price**      | `log_return_1d`, `log_return_5d`, `close_vs_ma20`, `close_vs_ma50`, `close_vs_ma200`, `daily_range_pct`, `close_to_high_pct`, `close_to_low_pct` |
+| **Volume**     | `volume_ratio_20`, `volume_ratio_50`, `volume_log_change`, `obv_slope_20` |
+| **Indicators** | `rsi14`, `macd_hist_norm`, `bb_position`, `atr14_pct`, `ma200_slope_pct` |
+
+All features are computed in a scale-free form so different tickers can be
+pooled into a single training corpus.
+
+### Labels (for the CNN)
+
+Each window is labelled by the forward return between the last bar of the
+window and `forward_horizon` bars later:
+
+| Forward return | Class |
+|---|---|
+| `> label_threshold`          | 2 = LONG  |
+| `[-label_threshold, +thr]`   | 1 = FLAT  |
+| `< -label_threshold`         | 0 = SHORT |
+
+Defaults: `forward_horizon = 5` days, `label_threshold = 0.01` (1 %).
+
+### Example: Training and Predicting
+
+```python
+from ib_insync import IB
+from data_fetch.historical_data import StockDataFetcher
+from data_fetch.stock_fetcher import StockTickerFetcher
+from strategy.ai_analysis import AIAnalyzer, FeatureBuilder
+
+# 1. Connect to IB (use a different clientId than the live bot)
+ib = IB()
+ib.connect('127.0.0.1', 4002, clientId=9)
+
+# 2. Build the fetcher and ticker list
+fetcher = StockTickerFetcher()
+data = StockDataFetcher(ib, config, params)
+tickers = fetcher.stock_list[:100]   # smaller subset while iterating
+
+# 3. Configure the pipeline
+analyzer = AIAnalyzer(
+    stock_data=data,
+    feature_builder=FeatureBuilder(window_size=10, n_bits=4, forward_horizon=5),
+    rbm_hidden_dim=64,
+    rbm_epochs=30,
+    cnn_epochs=20,
+)
+
+# 4. Train
+analyzer.train(tickers, val_split=0.2)
+
+# 5. Predict on a new ticker
+print(analyzer.predict('AAPL'))
+# -> {'symbol': 'AAPL', 'class': 'LONG', 'class_id': 2,
+#     'probs': {'SHORT': 0.12, 'FLAT': 0.31, 'LONG': 0.57}}
+```
+
+### Configuration knobs
+
+| Parameter | Where | Effect |
+|---|---|---|
+| `window_size`      | `FeatureBuilder` | Consecutive days per training sample. Drives RBM `visible_dim` and CNN `input_length`. |
+| `n_bits`           | `FeatureBuilder` | Thermometer-encoding resolution per continuous feature. Higher = more detail but larger `visible_dim`. |
+| `forward_horizon`  | `FeatureBuilder` | Bars ahead used to label each window. |
+| `label_threshold`  | `FeatureBuilder` | Forward-return cutoff that separates LONG / SHORT from FLAT. |
+| `rbm_hidden_dim`   | `AIAnalyzer`     | Size of the learned representation passed to the CNN. |
+| `rbm_epochs`       | `AIAnalyzer`     | Contrastive-divergence epochs. |
+| `cnn_epochs`       | `AIAnalyzer`     | Supervised training epochs. |
+
+### Training artifacts
+
+Running `analyzer.train(...)` writes to a `results/` directory relative to the
+current working directory:
+
+```
+results/
+├── logs/<date>/<time>/train/   # TensorBoard events from the RBM
+├── models/<date>/…model.h5     # RBM weights snapshot per epoch
+├── past_machines.csv           # index of saved RBMs
+└── temp_<T>_<shape>_<mode>.csv # per-epoch weights / biases / temperature trace
+```
+
+### Operational notes
+
+- **More data is better**: with the bot's default `lookback_days = 250`, the
+  200-day MA features eat ~220 bars of warm-up, leaving roughly 15 usable
+  windows per ticker. For serious training, increase `lookback_days` (e.g. to
+  2000) or pull history from a separate long-history source.
+- **Validation split is per-ticker, not per-day**: samples are concatenated in
+  ticker order and the last `val_split` fraction becomes the held-out set — so
+  the val set consists of *entire tickers* the models never saw. This is good
+  for generalisation checks, less so for detecting regime drift.
+- **Class imbalance**: the FLAT class usually dominates with default settings.
+  Watch the `class counts` line logged by `AIAnalyzer.build_dataset()` and tune
+  `label_threshold` / `forward_horizon` if the imbalance is severe.
+- **Use a dedicated `clientId`** when running AI training so it does not
+  interfere with a live bot session.
+
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.10+
 - Interactive Brokers account (paper trading recommended)
 - TWS or IB Gateway installed
 
@@ -96,6 +268,11 @@ cd Algo-Bot
 ```bash
 pip install -r requirements.txt
 ```
+
+The `requirements.txt` includes the AI pipeline dependencies (TensorFlow,
+PyTorch, scikit-learn, deepdish/h5py, tqdm, seaborn, cmocean). If you do not
+plan to use the AI pipeline you can comment those lines out in the file — the
+core trading bot itself does not import them.
 
 ### 3. Configure Environment (Optional)
 For email alerts, create a `.env` file in the project root:
@@ -263,10 +440,11 @@ Example log output:
 
 ### Run Tests
 ```bash
-python run_tests.py
+python tests_main.py
 ```
 
 ### Test Coverage
+- `test_ai_analysis.py`: Tests data flow of the AI modules
 - `test_position_manager.py`: Position tracking logic
 - `test_retest_200ma.py`: Strategy pattern detection
 - `test_risk_manager.py`: Risk calculation validation
@@ -322,6 +500,31 @@ data/test_logs/test_retest_200ma_3-22-2026_14-30.log
 - Use Gmail App Passwords (not regular password)
 - Enable 2FA on Gmail account
 - Check environment variables: `GMAIL_USER` and `GMAIL_PASSWORD`
+
+### AI Pipeline Issues
+**`ModuleNotFoundError: No module named 'tensorflow'` / `torch` / `deepdish`**
+- Install AI dependencies: `pip install -r requirements.txt`
+- These are only needed if you use `strategy.ai_analysis.AIAnalyzer`; the
+  deterministic bot does not import them
+
+**"No tickers produced usable features"**
+- Each ticker needs at least ~220 bars of history before the 200-day MA
+  features come online. Raise `lookback_days` in `trading_params.json` or
+  use a longer history source
+
+**RuntimeError: `x_train must be (N, <visible_dim>)`**
+- The RBM's `visible_dim` must equal `window_size × n_features × n_bits`.
+  If you supply a custom set of extractors, pass them all to the
+  `FeatureBuilder(extractors=[...])` so its `visible_dim` property matches
+
+**CNN validation accuracy stuck around 1/3**
+- Class imbalance — most samples are FLAT. Check the `class counts=[…]`
+  line logged during `build_dataset()` and tune `label_threshold` /
+  `forward_horizon`
+
+**`results/` directory filling up with .h5 files**
+- The legacy RBM calls `save_model()` every epoch by design. Clear it between
+  runs or run training inside a dedicated working directory
 
 ## 📊 Performance Monitoring
 

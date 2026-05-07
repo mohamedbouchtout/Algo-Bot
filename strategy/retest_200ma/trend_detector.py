@@ -104,7 +104,7 @@ class TrendDetector:
                             continue
                     
                     entry_price = close[-1]
-                    stop_loss = low[j] * 0.99
+                    stop_loss = low[j] * (1 - self.params['strategy_retest_200ma']['stop_loss_pct'])
                     risk = entry_price - stop_loss
                     
                     if risk <= 0 or risk / entry_price > 0.05:
@@ -122,6 +122,7 @@ class TrendDetector:
                     
                     logger.info(f"Long pattern detected on {DF['symbol'].iloc[0]}")
                     return {
+                        'strategy_type': '200ma_retest',
                         'type': 'LONG',
                         'symbol': DF['symbol'].iloc[0],
                         'entry': entry_price,
@@ -232,7 +233,7 @@ class TrendDetector:
                                 continue
                         
                         entry_price = close[-1]
-                        stop_loss = high[j] * 1.01
+                        stop_loss = high[j] * (1 + self.params['strategy_retest_200ma']['stop_loss_pct'])
                         risk = stop_loss - entry_price
                         
                         if risk <= 0 or risk / entry_price > 0.05:
@@ -250,6 +251,7 @@ class TrendDetector:
                         
                         logger.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
                         return {
+                            'strategy_type': '200ma_retest',
                             'type': 'SHORT',
                             'symbol': DF['symbol'].iloc[0],
                             'entry': entry_price,

@@ -103,26 +103,41 @@ class PositionManager:
                 # Only load if position actually exists in IB
                 if symbol in ib_symbols:
                     # Reconstruct signal dict
-                    signal = {
-                        'type': position_data['type'],
-                        'symbol': symbol,
-                        'entry': position_data['entry'],
-                        'stop': position_data['stop'],
-                        'target': position_data['target'],
-                        'risk': position_data['risk'],
-                        'reward': position_data['reward'],
-                        'breakout_date': position_data['breakout_date'],
-                        'retest_date': position_data['retest_date'],
-                        'current_date': position_data['current_date'],
-                        'breakout_volume_ratio': position_data.get('breakout_volume_ratio', 0),
-                        'retest_volume_ratio': position_data.get('retest_volume_ratio', 0),
-                        'avg_volume': position_data.get('avg_volume', 0),
-                        'bounce_strength': position_data.get('bounce_strength', 0),
-                        'breakdown_strength': position_data.get('breakdown_strength', 0),
-                        'ma_slope': position_data.get('ma_slope', 0),
-                        'ma_slope_pct': position_data.get('ma_slope_pct', 0)
-                    }
-                    
+                    signal = None
+                    if position_data['strategy_type'] == '200ma_retest':
+                        signal = {
+                            'strategy_type': position_data['strategy_type'],
+                            'type': position_data['type'],
+                            'symbol': symbol,
+                            'entry': position_data['entry'],
+                            'stop': position_data['stop'],
+                            'target': position_data['target'],
+                            'risk': position_data['risk'],
+                            'reward': position_data['reward'],
+                            'breakout_date': position_data['breakout_date'],
+                            'retest_date': position_data['retest_date'],
+                            'current_date': position_data['current_date'],
+                            'breakout_volume_ratio': position_data.get('breakout_volume_ratio', 0),
+                            'retest_volume_ratio': position_data.get('retest_volume_ratio', 0),
+                            'avg_volume': position_data.get('avg_volume', 0),
+                            'bounce_strength': position_data.get('bounce_strength', 0),
+                            'breakdown_strength': position_data.get('breakdown_strength', 0),
+                            'ma_slope': position_data.get('ma_slope', 0),
+                            'ma_slope_pct': position_data.get('ma_slope_pct', 0)
+                        }
+                    elif position_data['strategy_type'] == 'ai_analysis':
+                        signal = {
+                            'strategy_type': position_data['strategy_type'],
+                            'type': position_data['type'],
+                            'symbol': symbol,
+                            'entry': position_data['entry'],
+                            'stop': position_data['stop'],
+                            'target': position_data['target'],
+                            'risk': position_data['risk'],
+                            'reward': position_data['reward'],
+                            'confidence': position_data.get('confidence', 0)
+                        }
+
                     self.active_positions[symbol] = {
                         'signal': signal,
                         'shares': position_data['shares'],
@@ -158,27 +173,44 @@ class PositionManager:
                 data = {}
 
             # Create entry with proper datetime serialization
-            new_entry = {
-                'type': signal['type'],
-                'symbol': symbol,
-                'entry': signal['entry'],
-                'stop': signal['stop'],
-                'target': signal['target'],
-                'risk': signal['risk'],
-                'reward': signal['risk'] * self.params['strategy_retest_200ma']['risk_reward_ratio'],
-                'breakout_date': signal['breakout_date'].strftime('%Y-%m-%d') if hasattr(signal['breakout_date'], 'strftime') else str(signal['breakout_date']),
-                'retest_date': signal['retest_date'].strftime('%Y-%m-%d') if hasattr(signal['retest_date'], 'strftime') else str(signal['retest_date']),
-                'current_date': signal['current_date'].strftime('%Y-%m-%d') if hasattr(signal['current_date'], 'strftime') else str(signal['current_date']),
-                'breakout_volume_ratio': signal.get('breakout_volume_ratio', 0),
-                'retest_volume_ratio': signal.get('retest_volume_ratio', 0),
-                'avg_volume': signal.get('avg_volume', 0),
-                'bounce_strength': signal.get('bounce_strength', 0),
-                'breakdown_strength': signal.get('breakdown_strength', 0),
-                'ma_slope': signal.get('ma_slope', 0),
-                'ma_slope_pct': signal.get('ma_slope_pct', 0),
-                'shares': shares,
-                'entry_time': entry_time
-            }
+            new_entry = None
+            if signal['strategy_type'] == '200ma_retest':
+                new_entry = {
+                    'strategy_type': signal['strategy_type'],
+                    'type': signal['type'],
+                    'symbol': symbol,
+                    'entry': signal['entry'],
+                    'stop': signal['stop'],
+                    'target': signal['target'],
+                    'risk': signal['risk'],
+                    'reward': signal['risk'] * self.params['strategy_retest_200ma']['risk_reward_ratio'],
+                    'breakout_date': signal['breakout_date'].strftime('%Y-%m-%d') if hasattr(signal['breakout_date'], 'strftime') else str(signal['breakout_date']),
+                    'retest_date': signal['retest_date'].strftime('%Y-%m-%d') if hasattr(signal['retest_date'], 'strftime') else str(signal['retest_date']),
+                    'current_date': signal['current_date'].strftime('%Y-%m-%d') if hasattr(signal['current_date'], 'strftime') else str(signal['current_date']),
+                    'breakout_volume_ratio': signal.get('breakout_volume_ratio', 0),
+                    'retest_volume_ratio': signal.get('retest_volume_ratio', 0),
+                    'avg_volume': signal.get('avg_volume', 0),
+                    'bounce_strength': signal.get('bounce_strength', 0),
+                    'breakdown_strength': signal.get('breakdown_strength', 0),
+                    'ma_slope': signal.get('ma_slope', 0),
+                    'ma_slope_pct': signal.get('ma_slope_pct', 0),
+                    'shares': shares,
+                    'entry_time': entry_time
+                }
+            elif signal['strategy_type'] == 'ai_analysis':
+                new_entry = {
+                    'strategy_type': signal['strategy_type'],
+                    'type': signal['type'],
+                    'symbol': symbol,
+                    'entry': signal['entry'],
+                    'stop': signal['stop'],
+                    'target': signal['target'],
+                    'risk': signal['risk'],
+                    'reward': signal['reward'],
+                    'confidence': signal['confidence'],
+                    'shares': shares,
+                    'entry_time': entry_time
+                }
             
             # Add to data
             data[symbol] = new_entry
