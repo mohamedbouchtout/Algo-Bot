@@ -111,6 +111,10 @@ class TradingBot:
         git_manager = GitManager(self.ib, connection_manager, self.config, self.params)
 
         try:
+            # Check for updates before starting the bot
+            last_git_check = datetime.now()
+            last_git_check = git_manager.git(last_git_check, force_check=True)
+
             while not connection_manager.connect():
                 self.logger.warning("Cannot connect to IB - will retry in 1 minute")
                 self.ib.sleep(60)  # 1 minute
@@ -118,8 +122,6 @@ class TradingBot:
             # Cold-start training if no model exists
             if self.should_retrain(scheduler):
                 self.train_modules(ai_analyzer, stock_fetcher)
-
-            last_git_check = datetime.now()
 
             while True:
                 if scheduler.is_market_hours() and connection_manager.ensure_connected():

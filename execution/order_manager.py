@@ -54,7 +54,8 @@ class OrderManager:
                         ai_signal = self.ai_analyzer.construct_signal(df, self.params, class_type, prediction['probs'][class_type])
                         if ai_signal:
                             self.execute_signal(ai_signal)  # Execute immediately for each signal
-                            self.ib.sleep(1)  # Small delay to avoid rate limiting
+                            logger.info("Waiting 3 minutes after executing signal...")
+                            self.ib.sleep(180)  # Small delay to avoid rate limiting
                             continue
             except RuntimeError as e:
                 logger.warning(f"AI prediction failed for {symbol} (not trained): {e}")
@@ -73,6 +74,8 @@ class OrderManager:
                         f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
                 
                 self.execute_signal(signal)  # Execute immediately for each signal
+                logger.info("Waiting 3 minutes after executing signal...")
+                self.ib.sleep(180)  # Small delay to avoid rate limiting
             else:
                 logger.info(f"No signal found for {symbol}")
             
@@ -147,15 +150,16 @@ class OrderManager:
             # MARKET parent ensures we actually get filled. Children stay as the
             # stop/target prices from the signal.
             action = 'BUY' if signal['type'] == 'LONG' else 'SELL'
-            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False,
-                                 transmit=False)
+            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False, transmit=False)
+            parent_trade = self.ib.placeOrder(contract, parent)
+
             take_profit = LimitOrder(
                 'SELL' if action == 'BUY' else 'BUY',
                 shares,
                 signal['target'],
                 tif='GTC',
-                outsideRth=False,
-                parentId=0,            # filled in below
+                outsideRth=True,
+                parentId=parent_trade.order.orderId,            # filled in below
                 transmit=False,
             )
             stop_loss = StopOrder(
@@ -163,20 +167,17 @@ class OrderManager:
                 shares,
                 signal['stop'],
                 tif='GTC',
-                outsideRth=False,
-                parentId=0,
+                outsideRth=True,
+                parentId=parent_trade.order.orderId,
                 transmit=True,         # last child triggers all three
             )
 
-            # Submit parent first to assign IB an orderId, then chain children
-            parent_trade = self.ib.placeOrder(contract, parent)
-            take_profit.parentId = parent_trade.order.orderId
-            stop_loss.parentId  = parent_trade.order.orderId
+            # Submit children orders
             self.ib.placeOrder(contract, take_profit)
             self.ib.placeOrder(contract, stop_loss)
 
-            # Wait up to 30 s for the parent to fill.  Yields to the event loop.
-            deadline = time.time() + 30
+            # Wait up to 60 s for the parent to fill.  Yields to the event loop.
+            deadline = time.time() + 60
             while parent_trade.orderStatus.status not in ('Filled', 'Cancelled', 'ApiCancelled', 'Inactive'):
                 self.ib.waitOnUpdate(timeout=1)
                 if time.time() > deadline:
@@ -189,7 +190,11 @@ class OrderManager:
                     f"{symbol} parent order did NOT fill (status={status}). "
                     f"Cancelling bracket and skipping persistence."
                 )
-                self.ib.cancelOrder(parent_trade.order)
+                for order in [parent_trade.order, take_profit, stop_loss]:
+                    try:
+                        self.ib.cancelOrder(order)
+                    except Exception as cancel_err:
+                        logger.error(f"Failed to cancel order: {cancel_err}")
                 return
 
             # Use the actual fill price, not the stale signal price
