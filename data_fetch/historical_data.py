@@ -16,16 +16,22 @@ class StockDataFetcher:
         self.config = config
         self.params = params
 
-    def get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
+    def get_historical_data(self, symbol: str, loopback_days: int) -> Optional[pd.DataFrame]:
         """Fetch historical daily data for a stock"""
         try:
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
             
+            duration = ""
+            if loopback_days > 365:
+                duration = f'{loopback_days // 365} Y'
+            else:
+                duration = f'{loopback_days} D'
+
             bars = self.ib.reqHistoricalData(
                 contract,
                 endDateTime='',
-                durationStr=f'{self.params["strategy_retest_200ma"]["lookback_days"]} D',
+                durationStr=duration,
                 barSizeSetting='1 day',
                 whatToShow='TRADES',
                 useRTH=True,

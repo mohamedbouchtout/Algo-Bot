@@ -7,6 +7,7 @@ from ib_insync import *
 import os
 import requests
 import json
+import yfinance as yf
 
 # Setup logging
 logger = logging.getLogger()
@@ -16,6 +17,7 @@ class StockTickerFetcher:
         # Save to repo root data folder instead of data_fetch/data
         self.file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'stock_list.txt')
         self.stock_list = self.save_stock_list()
+        self.categorized_stocks = self.categorize_stocks()
 
     def get_sp500_tickers(self):
         """Fetch S&P 500 from GitHub dataset"""
@@ -110,3 +112,24 @@ class StockTickerFetcher:
         logger.info(f"Saved {len(stocks)} tickers to {self.file_path}")
         
         return stocks
+
+    def categorize_stocks(self) -> dict:
+        """Categorize stocks by sector and industry for better AI training"""
+        categorized = {}
+        
+        for ticker in self.stock_list:
+            try:
+                info = yf.Ticker(ticker).info
+                sector = info.get('sector', 'Unknown')
+                industry = info.get('industry', 'Unknown')
+                
+                if sector not in categorized:
+                    categorized[sector] = {}
+                if industry not in categorized[sector]:
+                    categorized[sector][industry] = []
+                
+                categorized[sector][industry].append(ticker)
+            except Exception as e:
+                logger.warning(f"Failed to categorize {ticker}: {e}")
+        
+        return categorized

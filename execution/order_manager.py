@@ -18,69 +18,71 @@ from utils.alerts import AlertManager
 logger = logging.getLogger()
 
 class OrderManager:
-    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, ai_analyzer: AIAnalyzer, config, params):
+    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, ai_analyzers: Dict[str, AIAnalyzer], config, params):
         self.ib = ib
         self.stock_data = stock_data
         self.position_manager = position_manager
         self.alert_manager = alert_manager
-        self.ai_analyzer = ai_analyzer
+        self.ai_analyzers = ai_analyzers
         self.config = config
         self.params = params
 
-    def scan_stocks(self, stock_list: list[str]):
+    def scan_stocks(self, categorized_stocks: Dict[str, Dict[str, list]]):
         """Scan all stocks for trading signals"""
-        logger.info(f"Scanning {len(stock_list)} stocks...")
+        logger.info("Scanning all stocks...")
 
-        for symbol in stock_list:
-            # Skip if we already have a position
-            if symbol in self.position_manager.active_positions:
-                continue
-            
-            # Get historical data
-            logger.info(f"Testing {symbol}...")
-            df = self.stock_data.get_historical_data(symbol)
-            
-            if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
-                continue
+        for sector, industries in categorized_stocks.items():
+            for industry, tickers in industries.items():
+                for ticker in tickers:
+                    # Skip if we already have a position
+                    if ticker in self.position_manager.active_positions:
+                        continue
+                    
+                    # Get historical data
+                    logger.info(f"Testing {ticker}...")
+                    df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['loopback_days'])
+                    
+                    if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
+                        continue
 
-            # AI predictions
-            try:
-                prediction = self.ai_analyzer.predict(symbol)
-                if prediction is not None and 'probs' in prediction and prediction['class'] in prediction['probs']:
-                    class_type = prediction['class']
-                    if prediction['probs'][class_type] > self.params['ai_analyzer']['confidence_threshold'] and class_type in ['LONG', 'SHORT']:
-                        logger.info(f"AI prediction for {symbol}: {class_type} with confidence {prediction['probs'][class_type]:.2f}")
+                    # AI predictions
+                    try:
+                        prediction = self.ai_analyzers[sector].predict(ticker)
+                        if prediction is not None and 'probs' in prediction and prediction['class'] in prediction['probs']:
+                            class_type = prediction['class']
+                            if prediction['probs'][class_type] > self.params['ai_analyzer']['confidence_threshold'] and class_type in ['LONG', 'SHORT']:
+                                logger.info(f"AI prediction for {ticker}: {class_type} with confidence {prediction['probs'][class_type]:.2f}")
 
-                        ai_signal = self.ai_analyzer.construct_signal(df, self.params, class_type, prediction['probs'][class_type])
-                        if ai_signal:
-                            self.execute_signal(ai_signal)  # Execute immediately for each signal
-                            logger.info("Waiting 3 minutes after executing signal...")
-                            self.ib.sleep(180)  # Small delay to avoid rate limiting
-                            continue
-            except RuntimeError as e:
-                logger.warning(f"AI prediction failed for {symbol} (not trained): {e}")
-            except KeyError as e:
-                logger.warning(f"AI prediction data error for {symbol}: {e}")
-            except Exception as e:
-                logger.warning(f"Unexpected AI error for {symbol}: {e}")
-            
-            # Detect 200 MA pattern
-            indicator_200ma = TrendIndicator(df, self.config, self.params)
-            signal = indicator_200ma.detect_breakout_and_retest()
+                                ai_signal = self.ai_analyzers[sector].construct_signal(df, self.params, class_type, prediction['probs'][class_type])
+                                if ai_signal:
+                                    self.execute_signal(ai_signal)  # Execute immediately for each signal
+                                    logger.info("Waiting 3 minutes after executing signal...")
+                                    self.ib.sleep(180)  # Small delay to avoid rate limiting
+                                    continue
+                    except RuntimeError as e:
+                        logger.warning(f"AI prediction failed for {ticker} (not trained): {e}")
+                    except KeyError as e:
+                        logger.warning(f"AI prediction data error for {ticker}: {e}")
+                    except Exception as e:
+                        logger.warning(f"Unexpected AI error for {ticker}: {e}")
 
-            if signal:
-                logger.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}, "
-                        f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
-                        f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
-                
-                self.execute_signal(signal)  # Execute immediately for each signal
-                logger.info("Waiting 3 minutes after executing signal...")
-                self.ib.sleep(180)  # Small delay to avoid rate limiting
-            else:
-                logger.info(f"No signal found for {symbol}")
-            
-            # Small delay to avoid rate limiting
-            self.ib.sleep(1)
+                    # Detect 200 MA pattern
+                    indicator_200ma = TrendIndicator(df, self.config, self.params)
+                    signal = indicator_200ma.detect_breakout_and_retest()
+
+                    if signal:
+                        logger.info(f"Signal found: {signal['type']} {ticker} @ ${signal['entry']:.2f}, "
+                                f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
+                                f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
+                        
+                        self.execute_signal(signal)  # Execute immediately for each signal
+                        logger.info("Waiting 3 minutes after executing signal...")
+                        self.ib.sleep(180)  # Small delay to avoid rate limiting
+                    else:
+                        logger.info(f"No signal found for {ticker}")
+                    
+                    # Small delay to avoid rate limiting
+                    self.ib.sleep(1)
 
     def execute_signal(self, signal: Dict):
         """Execute trading signals"""

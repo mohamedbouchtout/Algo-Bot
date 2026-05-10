@@ -35,6 +35,8 @@ requests==2.31.0
 # -------------------------------
 # Better datetime parsing (optional but useful)
 python-dateutil==2.8.2
+# Stock data
+yfinance==1.3.0
 
 # -------------------------------
 # AI Analysis Pipeline (RBM + CNN)
