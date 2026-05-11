@@ -56,6 +56,7 @@ class AIAnalyzer:
         rbm_hidden_dim: int = 64,
         rbm_epochs: int = 30,
         cnn_epochs: int = 20,
+        params: Optional[Dict] = None,
     ):
         self.stock_data = stock_data
         self.feature_builder = feature_builder or FeatureBuilder(window_size=10, n_bits=4)
@@ -64,6 +65,7 @@ class AIAnalyzer:
         self.rbm_epochs = rbm_epochs
         self.cnn_epochs = cnn_epochs
         self.rbm_hidden_dim = rbm_hidden_dim
+        self.params = params or {}
 
         # Cache raw bars per ticker so we don't hit IB twice when building the
         # dataset and then the labelled samples.
@@ -78,7 +80,7 @@ class AIAnalyzer:
     def _get_bars(self, symbol: str) -> Optional[pd.DataFrame]:
         if symbol in self._bar_cache:
             return self._bar_cache[symbol]
-        df = self.stock_data.get_historical_data(symbol)
+        df = self.stock_data.get_historical_data(symbol, self.params['ai_analyzer']['lookback_days'])
         if df is not None:
             self._bar_cache[symbol] = df
         return df
@@ -224,7 +226,7 @@ class AIAnalyzer:
         if self.rbm_trainer is None or self.cnn_trainer is None:
             raise RuntimeError("Call train() or finalize_training() before predict()")
 
-        df = self.stock_data.get_historical_data(symbol)
+        df = self.stock_data.get_historical_data(symbol, self.params['ai_analyzer']['lookback_days'])
         if df is None or len(df) < 250:
             return None
 
@@ -252,6 +254,7 @@ class AIAnalyzer:
         symbol = df['symbol'].iloc[0]
         target_price = 0
         stop_loss = 0
+        risk = 0
 
         if class_type == 'LONG':
             stop_loss = df['close'].iloc[-1] * (1 - params['ai_analyzer']['stop_loss_pct'])

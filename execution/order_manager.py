@@ -5,6 +5,7 @@ Place and manage orders
 import logging
 from ib_insync import *
 from typing import Dict
+import time
 from datetime import datetime
 from execution.risk_manager import RiskManager
 from execution.position_manager import PositionManager
@@ -17,66 +18,71 @@ from utils.alerts import AlertManager
 logger = logging.getLogger()
 
 class OrderManager:
-    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, ai_analyzer: AIAnalyzer, config, params):
+    def __init__(self, ib, stock_data: StockDataFetcher, position_manager: PositionManager, alert_manager: AlertManager, ai_analyzers: Dict[str, AIAnalyzer], config, params):
         self.ib = ib
         self.stock_data = stock_data
         self.position_manager = position_manager
         self.alert_manager = alert_manager
-        self.ai_analyzer = ai_analyzer
+        self.ai_analyzers = ai_analyzers
         self.config = config
         self.params = params
 
-    def scan_stocks(self, stock_list: list[str]):
+    def scan_stocks(self, categorized_stocks: Dict[str, Dict[str, list]]):
         """Scan all stocks for trading signals"""
-        logger.info(f"Scanning {len(stock_list)} stocks...")
+        logger.info("Scanning all stocks...")
 
-        for symbol in stock_list:
-            # Skip if we already have a position
-            if symbol in self.position_manager.active_positions:
-                continue
-            
-            # Get historical data
-            logger.info(f"Testing {symbol}...")
-            df = self.stock_data.get_historical_data(symbol)
-            
-            if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
-                continue
+        for sector, industries in categorized_stocks.items():
+            for industry, tickers in industries.items():
+                for ticker in tickers:
+                    # Skip if we already have a position
+                    if ticker in self.position_manager.active_positions:
+                        continue
+                    
+                    # Get historical data
+                    logger.info(f"Testing {ticker}...")
+                    df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['loopback_days'])
+                    
+                    if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
+                        continue
 
-            # AI predictions
-            try:
-                prediction = self.ai_analyzer.predict(symbol)
-                if prediction is not None and 'probs' in prediction and prediction['class'] in prediction['probs']:
-                    class_type = prediction['class']
-                    if prediction['probs'][class_type] > self.params['ai_analyzer']['confidence_threshold'] and class_type in ['LONG', 'SHORT']:
-                        logger.info(f"AI prediction for {symbol}: {class_type} with confidence {prediction['probs'][class_type]:.2f}")
+                    # AI predictions
+                    try:
+                        prediction = self.ai_analyzers[sector].predict(ticker)
+                        if prediction is not None and 'probs' in prediction and prediction['class'] in prediction['probs']:
+                            class_type = prediction['class']
+                            if prediction['probs'][class_type] > self.params['ai_analyzer']['confidence_threshold'] and class_type in ['LONG', 'SHORT']:
+                                logger.info(f"AI prediction for {ticker}: {class_type} with confidence {prediction['probs'][class_type]:.2f}")
 
-                        ai_signal = self.ai_analyzer.construct_signal(df, self.params, class_type, prediction['probs'][class_type])
-                        if ai_signal:
-                            self.execute_signal(ai_signal)  # Execute immediately for each signal
-                            self.ib.sleep(1)  # Small delay to avoid rate limiting
-                            continue
-            except RuntimeError as e:
-                logger.warning(f"AI prediction failed for {symbol} (not trained): {e}")
-            except KeyError as e:
-                logger.warning(f"AI prediction data error for {symbol}: {e}")
-            except Exception as e:
-                logger.warning(f"Unexpected AI error for {symbol}: {e}")
-            
-            # Detect 200 MA pattern
-            indicator_200ma = TrendIndicator(df, self.config, self.params)
-            signal = indicator_200ma.detect_breakout_and_retest()
+                                ai_signal = self.ai_analyzers[sector].construct_signal(df, self.params, class_type, prediction['probs'][class_type])
+                                if ai_signal:
+                                    self.execute_signal(ai_signal)  # Execute immediately for each signal
+                                    logger.info("Waiting 3 minutes after executing signal...")
+                                    self.ib.sleep(180)  # Small delay to avoid rate limiting
+                                    continue
+                    except RuntimeError as e:
+                        logger.warning(f"AI prediction failed for {ticker} (not trained): {e}")
+                    except KeyError as e:
+                        logger.warning(f"AI prediction data error for {ticker}: {e}")
+                    except Exception as e:
+                        logger.warning(f"Unexpected AI error for {ticker}: {e}")
 
-            if signal:
-                logger.info(f"Signal found: {signal['type']} {symbol} @ ${signal['entry']:.2f}, "
-                        f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
-                        f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
-                
-                self.execute_signal(signal)  # Execute immediately for each signal
-            else:
-                logger.info(f"No signal found for {symbol}")
-            
-            # Small delay to avoid rate limiting
-            self.ib.sleep(1)
+                    # Detect 200 MA pattern
+                    indicator_200ma = TrendIndicator(df, self.config, self.params)
+                    signal = indicator_200ma.detect_breakout_and_retest()
+
+                    if signal:
+                        logger.info(f"Signal found: {signal['type']} {ticker} @ ${signal['entry']:.2f}, "
+                                f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
+                                f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
+                        
+                        self.execute_signal(signal)  # Execute immediately for each signal
+                        logger.info("Waiting 3 minutes after executing signal...")
+                        self.ib.sleep(180)  # Small delay to avoid rate limiting
+                    else:
+                        logger.info(f"No signal found for {ticker}")
+                    
+                    # Small delay to avoid rate limiting
+                    self.ib.sleep(1)
 
     def execute_signal(self, signal: Dict):
         """Execute trading signals"""
@@ -136,44 +142,78 @@ class OrderManager:
             logger.warning(f"Position size too small for {signal['symbol']}")
 
     def place_order(self, signal: Dict, shares: int):
-        """Place order based on signal"""
+        """Place order based on signal, waiting for the entry to actually fill
+        before persisting the position or alerting the user."""
         try:
             symbol = signal['symbol']
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
-            
-            # Create bracket order
-            bracket = self.ib.bracketOrder(
-                action='BUY' if signal['type'] == 'LONG' else 'SELL',
-                quantity=shares,
-                limitPrice=signal['entry'],
-                takeProfitPrice=signal['target'],
-                stopLossPrice=signal['stop']
+
+            # MARKET parent ensures we actually get filled. Children stay as the
+            # stop/target prices from the signal.
+            action = 'BUY' if signal['type'] == 'LONG' else 'SELL'
+            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False, transmit=False)
+            parent_trade = self.ib.placeOrder(contract, parent)
+
+            take_profit = LimitOrder(
+                'SELL' if action == 'BUY' else 'BUY',
+                shares,
+                signal['target'],
+                tif='GTC',
+                outsideRth=True,
+                parentId=parent_trade.order.orderId,            # filled in below
+                transmit=False,
             )
-            
-            # Place the bracket order
-            for order in bracket:
-                order.tif = 'DAY'  # Day order
-                order.outsideRth = False  # Don't allow outside regular trading hours
-                trade = self.ib.placeOrder(contract, order)
-                logger.info(f"Order placed: {trade}")
-            
-            # Track position
+            stop_loss = StopOrder(
+                'SELL' if action == 'BUY' else 'BUY',
+                shares,
+                signal['stop'],
+                tif='GTC',
+                outsideRth=True,
+                parentId=parent_trade.order.orderId,
+                transmit=True,         # last child triggers all three
+            )
+
+            # Submit children orders
+            self.ib.placeOrder(contract, take_profit)
+            self.ib.placeOrder(contract, stop_loss)
+
+            # Wait up to 60 s for the parent to fill.  Yields to the event loop.
+            deadline = time.time() + 60
+            while parent_trade.orderStatus.status not in ('Filled', 'Cancelled', 'ApiCancelled', 'Inactive'):
+                self.ib.waitOnUpdate(timeout=1)
+                if time.time() > deadline:
+                    break
+
+            status = parent_trade.orderStatus.status
+            fill_price = parent_trade.orderStatus.avgFillPrice
+            if status != 'Filled' or fill_price <= 0:
+                logger.warning(
+                    f"{symbol} parent order did NOT fill (status={status}). "
+                    f"Cancelling bracket and skipping persistence."
+                )
+                for order in [parent_trade.order, take_profit, stop_loss]:
+                    try:
+                        self.ib.cancelOrder(order)
+                    except Exception as cancel_err:
+                        logger.error(f"Failed to cancel order: {cancel_err}")
+                return
+
+            # Use the actual fill price, not the stale signal price
+            signal['entry'] = float(fill_price)
+
             entry_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.position_manager.active_positions[symbol] = {
                 'signal': signal,
                 'shares': shares,
-                'entry_time': entry_time
+                'entry_time': entry_time,
             }
-
-            # Save to JSON with proper serialization
             self.position_manager.add_position(symbol, signal, shares, entry_time)
-            
-            logger.info(f"Entered {signal['type']} position in {symbol}: "
-                        f"{shares} shares @ ${signal['entry']:.2f}, "
-                        f"Stop: ${signal['stop']:.2f}, Target: ${signal['target']:.2f}")
-            
-            # Send email alert for new trade entry
+
+            logger.info(
+                f"FILLED {signal['type']} {symbol}: {shares} sh @ ${fill_price:.2f}, "
+                f"Stop: ${signal['stop']:.2f}, Target: ${signal['target']:.2f}"
+            )
             self.alert_manager.alert_trade_entry(signal)
 
         except Exception as e:

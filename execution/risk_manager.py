@@ -35,13 +35,12 @@ class RiskManager:
     def calculate_position_size(self, account_value, entry_price, stop_price):
         """Calculate shares based on risk"""
         risk_per_trade = account_value * self.params['risk_management']['risk_per_trade_pct']
-        risk_per_share = abs(entry_price - stop_price)
         
-        if risk_per_share <= 0:
+        if entry_price <= 0 and stop_price <= 0:
             return 0
         
-        shares = int(risk_per_trade / risk_per_share)
-        return max(shares, 1)
+        shares = int(risk_per_trade / entry_price)
+        return shares
     
     def validate_trade_size(self, shares, entry_price, available_cash):
         """Check if trade fits within available cash"""

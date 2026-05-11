@@ -20,19 +20,23 @@ class GitManager:
         self.params = params
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    def git(self, last_git_check: datetime) -> datetime:
+    def git(self, last_git_check: datetime, force_check: bool = False) -> datetime:
         """Commit and push changes to git if interval has passed"""
+        now = datetime.now()
+        already_checked_today = last_git_check.date() == now.date()
+
         # Only commit once per hour
         # if (datetime.now() - last_git_check).total_seconds() > self.config['git']['commit_interval']:
         #     self.git_commit_and_push("Auto-commit: Trading bot update")
         #     last_git_check = datetime.now()
         
         # Check for updates only once per day and after market close
-        if datetime.now().hour == 16 and datetime.now().minute < 20:  # After market close
+        if force_check or (now.hour >= 16 and not already_checked_today):  # After market close
             if self.check_for_updates():
-                self.logger.info("Updating and restarting bot to apply new changes...")
+                logger.info("Updating and restarting bot to apply new changes...")
                 if self.pull_updates():
                     self.connection_manager.restart_bot()
+            last_git_check = now
 
         return last_git_check
 
@@ -69,7 +73,7 @@ class GitManager:
             # Fetch latest
             logger.info("Pulling latest changes...")
 
-            subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True)
+            subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True, text=True)
             # Use rebase instead of merge to avoid creating merge commits
             result = subprocess.run(
                 ['git', 'rebase', f'origin/{self.config["git"]["main_branch"]}'],
@@ -80,15 +84,6 @@ class GitManager:
 
             if result.returncode == 0:
                 logger.info("Rebase successful!")
-                
-                # Push the rebased commits
-                subprocess.run(
-                    ['git', 'push', '--force-with-lease'],  # Use force-with-lease to safely push rebased commits
-                    cwd=self.base_dir,
-                    check=True,
-                    capture_output=True
-                )
-                
                 return True
             
             else:
@@ -97,27 +92,26 @@ class GitManager:
                 
                 # Try to auto-resolve
                 if self.auto_resolve_conflicts():
-                    logger.info("Conflicts auto-resolved")
+                    logger.info("Conflicts staged, continuing rebase...")
                     # Continue rebase
                     result = subprocess.run(
                         ['git', 'rebase', '--continue'],
                         cwd=self.base_dir,
                         capture_output=True,
-                        text=True
+                        text=True,
+                        env={**os.environ, 'GIT_EDITOR': 'true'}
                     )
                     if result.returncode == 0:
+                        logger.info("Rebase completed after conflict resolution.")
                         return True
                 logger.error("Manual intervention required")
+                # Abort rebase if it's in progress
+                subprocess.run(['git', 'rebase', '--abort'], cwd=self.base_dir, check=False)
                 return False
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to rebase updates: {e}")
-            
             # Abort rebase if it's in progress
-            subprocess.run(
-                ['git', 'rebase', '--abort'],
-                cwd=self.base_dir,
-                check=False
-            )
+            subprocess.run(['git', 'rebase', '--abort'], cwd=self.base_dir, check=False)
             
             return False
 
@@ -148,7 +142,7 @@ class GitManager:
             
             for file in conflict_files:
                 # Strategy: Code files → use main, Data files → use ours
-                if file.endswith('.py') or file.endswith('.json') and 'config/' in file:
+                if file.endswith('.py') or (file.endswith('.json') and 'config/' in file):
                     # Code/config files: Accept changes from main
                     logger.info(f"  {file}: Using version from {self.config['git']['main_branch']}")
                     subprocess.run(
@@ -173,19 +167,9 @@ class GitManager:
                         check=True
                     )
             
-            # Complete the merge
+            # Complete the rebase by staging the resolved files
             subprocess.run(
                 ['git', 'add', '.'],
-                cwd=self.base_dir,
-                check=True
-            )
-            subprocess.run(
-                ['git', 'commit', '-m', 'Auto-resolved merge conflicts'],
-                cwd=self.base_dir,
-                check=True
-            )
-            subprocess.run(
-                ['git', 'push'],
                 cwd=self.base_dir,
                 check=True
             )
@@ -195,9 +179,9 @@ class GitManager:
         except Exception as e:
             logger.error(f"Failed to auto-resolve conflicts: {e}")
             
-            # Abort the merge
+            # Abort the rebase
             subprocess.run(
-                ['git', 'merge', '--abort'],
+                ['git', 'rebase', '--abort'],
                 cwd=self.base_dir,
                 check=False
             )
