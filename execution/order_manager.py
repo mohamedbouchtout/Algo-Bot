@@ -100,9 +100,9 @@ class OrderManager:
         # Calculate current invested amount
         current_positions = self.ib.positions()
         invested_amount = sum(
-            abs(pos.position * pos.marketPrice) 
-            for pos in current_positions 
-            if pos.position != 0
+            abs(item.position * item.marketPrice)
+            for item in self.ib.portfolio()
+            if item.position != 0
         )
 
         # Cash reserve requirement (30% must stay in cash)
