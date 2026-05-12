@@ -40,7 +40,7 @@ class OrderManager:
                     
                     # Get historical data
                     logger.info(f"Testing {ticker}...")
-                    df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['loopback_days'])
+                    df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['lookback_days'])
                     
                     if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
                         continue

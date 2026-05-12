@@ -119,6 +119,16 @@ class TrendDetector:
                     
                     # Calculate MA slope for logging
                     ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
+
+                    # Format prices based on price level
+                    if entry_price < 1:
+                        entry_price = round(entry_price, 4)
+                        target_price = round(target_price, 4)
+                        stop_loss = round(stop_loss, 4)
+                    else:
+                        entry_price = round(entry_price, 2)
+                        target_price = round(target_price, 2)
+                        stop_loss = round(stop_loss, 2)
                     
                     logger.info(f"Long pattern detected on {DF['symbol'].iloc[0]}")
                     return {
@@ -248,6 +258,16 @@ class TrendDetector:
                         
                         # Calculate MA slope
                         ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
+
+                        # Format prices based on price level
+                        if entry_price < 1:
+                            entry_price = round(entry_price, 4)
+                            target_price = round(target_price, 4)
+                            stop_loss = round(stop_loss, 4)
+                        else:
+                            entry_price = round(entry_price, 2)
+                            target_price = round(target_price, 2)
+                            stop_loss = round(stop_loss, 2)
                         
                         logger.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
                         return {
