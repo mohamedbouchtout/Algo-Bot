@@ -265,6 +265,16 @@ class AIAnalyzer:
             risk = stop_loss - entry_price
             target_price = entry_price - (risk * params['ai_analyzer']['risk_reward_ratio'])
 
+        # Format prices based on price level
+        if entry_price < 1:
+            entry_price = round(entry_price, 4)
+            target_price = round(target_price, 4)
+            stop_loss = round(stop_loss, 4)
+        else:
+            entry_price = round(entry_price, 2)
+            target_price = round(target_price, 2)
+            stop_loss = round(stop_loss, 2)
+
         return {
             'strategy_type': 'ai_analysis',
             'type': class_type,
