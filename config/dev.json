@@ -5,7 +5,7 @@
         "client_id": 1
     },
     "logging": {
-        "level": "DEBUG",
+        "level": "INFO",
         "console": true
     },
     "alerts": {
