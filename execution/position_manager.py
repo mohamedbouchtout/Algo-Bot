@@ -64,14 +64,16 @@ class PositionManager:
         # Log currently active positions
         if self.active_positions:
             logger.info(f"Active positions: {len(self.active_positions)} stocks")
+
+            ib_portfolio = self.ib.portfolio()
             for symbol, info in self.active_positions.items():
                 # Find the position in IB data for P&L info
-                ib_pos = next((p for p in ib_positions if p.contract.symbol == symbol), None)
+                ib_pos = next((p for p in ib_portfolio if p.contract.symbol == symbol), None)
                 if ib_pos:
                     logger.info(
                         f"  {symbol}: {info['signal']['type']}, "
                         f"Qty: {ib_pos.position}, "
-                        f"Avg Cost: ${ib_pos.avgCost:.2f}, "
+                        f"Avg Cost: ${ib_pos.averageCost:.2f}, "
                         f"Current: ${ib_pos.marketPrice:.2f}, "
                         f"P&L: ${ib_pos.unrealizedPNL:.2f}"
                     )
