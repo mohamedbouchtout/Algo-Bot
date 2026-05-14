@@ -98,7 +98,7 @@ class OrderManager:
                 cash_balance = float(item.value)
         
         # Calculate current invested amount
-        current_positions = self.ib.positions()
+        current_positions = [p for p in self.ib.portfolio() if p.position != 0]
         invested_amount = sum(
             abs(item.position * item.marketPrice)
             for item in self.ib.portfolio()

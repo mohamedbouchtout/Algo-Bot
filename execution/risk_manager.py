@@ -36,7 +36,7 @@ class RiskManager:
         """Calculate shares based on risk"""
         risk_per_trade = account_value * self.params['risk_management']['risk_per_trade_pct']
         
-        if entry_price <= 0 and stop_price <= 0:
+        if entry_price <= 0 or stop_price <= 0:
             return 0
         
         shares = int(risk_per_trade / entry_price)

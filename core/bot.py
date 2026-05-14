@@ -24,10 +24,10 @@ class TradingBot:
     TRAIN_INTERVAL = timedelta(days=6)
 
     def __init__(self):
+        self.logger = setup_logger(self.config, 'bot_logs', 'trading_bot.log')
         self.ib = IB()
         self.config = self.load_config()
         self.params = self.load_params()
-        self.logger = setup_logger(self.config, 'bot_logs', 'trading_bot.log')
         self.last_train_time: datetime | None = None
 
     def load_config(self):
@@ -40,7 +40,7 @@ class TradingBot:
         except Exception as e:
             # Fallback if Git isn't installed or this isn't a repo
             self.logger.warning(f"Could not detect Git branch ({e}). Defaulting to 'dev'.")
-            branch = 'develop'
+            branch = 'bot/nonproduction'
 
         # 2. Set environment based on branch
         # If we are on 'main' or 'master', use prod. Otherwise, use dev.

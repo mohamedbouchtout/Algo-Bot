@@ -17,6 +17,7 @@ from utils.logger import setup_logger
 
 class RunTests:
     def __init__(self):
+        self.logger = setup_logger(self.config, 'test_logs', 'tests.log')
         self.ib = IB()
         self.params = self.load_params()
         self.config = self.load_config()
@@ -25,7 +26,6 @@ class RunTests:
         self.alert_manager = AlertManager(self.config, self.params)
         self.position_manager = PositionManager(self.ib, self.alert_manager, self.config, self.params)
         self.connection_manager = ConnectionManager(self.ib, self.position_manager, self.alert_manager, self.config, self.params)
-        self.logger = setup_logger(self.config, 'test_logs', 'tests.log')
 
     def load_params(self):
         """Load parameters from JSON file"""
@@ -48,7 +48,7 @@ class RunTests:
         except Exception as e:
             # Fallback if Git isn't installed or this isn't a repo
             self.logger.warning(f"Could not detect Git branch ({e}). Defaulting to 'dev'.")
-            branch = 'develop'
+            branch = 'bot/nonproduction'
 
         # 2. Set environment based on branch
         # If we are on 'main' or 'master', use prod. Otherwise, use dev.
