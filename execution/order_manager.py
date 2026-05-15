@@ -178,13 +178,14 @@ class OrderManager:
             self.ib.placeOrder(contract, take_profit)
             self.ib.placeOrder(contract, stop_loss)
 
-            # Wait up to 60 s for the parent to fill.  Yields to the event loop.
-            deadline = time.time() + 60
+            # Wait up to 600 s for the parent to fill.  Yields to the event loop.
+            deadline = time.time() + 600
             while parent_trade.orderStatus.status not in ('Filled', 'Cancelled', 'ApiCancelled', 'Inactive'):
                 self.ib.waitOnUpdate(timeout=1)
                 if time.time() > deadline:
                     break
 
+            filled_qty = parent_trade.orderStatus.filled
             status = parent_trade.orderStatus.status
             fill_price = parent_trade.orderStatus.avgFillPrice
             if status != 'Filled' or fill_price <= 0:
@@ -197,6 +198,20 @@ class OrderManager:
                         self.ib.cancelOrder(order)
                     except Exception as cancel_err:
                         logger.error(f"Failed to cancel order: {cancel_err}")
+
+                # Close out any partial filled orders
+                if filled_qty > 0:
+                    logger.warning(
+                        f"{symbol} partial fill of {filled_qty} shares at ${fill_price:.2f}. "
+                        f"Attempting to cancel remaining and skip persistence."
+                    )
+                    try:
+                        close_action = 'SELL' if action == 'BUY' else 'BUY'
+                        close_order = MarketOrder(close_action, filled_qty, tif='DAY', transmit=True)
+                        self.ib.placeOrder(contract, close_order)
+                    except Exception as cancel_err:
+                        logger.error(f"Failed to cancel remaining order: {cancel_err}")
+                        
                 return
 
             # Use the actual fill price, not the stale signal price

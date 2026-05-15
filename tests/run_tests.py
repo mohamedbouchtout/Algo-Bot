@@ -17,10 +17,10 @@ from utils.logger import setup_logger
 
 class RunTests:
     def __init__(self):
-        self.logger = setup_logger(self.config, 'test_logs', 'tests.log')
         self.ib = IB()
         self.params = self.load_params()
         self.config = self.load_config()
+        self.logger = setup_logger(self.config, 'test_logs', 'tests.log')
         self.stock_data_fetcher = StockDataFetcher(self.ib, self.config, self.params)
         self.stock_fetcher = StockTickerFetcher()
         self.alert_manager = AlertManager(self.config, self.params)
@@ -35,7 +35,6 @@ class RunTests:
                 params = json.load(file)
             return params
         except Exception as e:
-            self.logger.error(f"Failed to load parameters: {e}")
             raise
 
     def load_config(self):
@@ -47,7 +46,6 @@ class RunTests:
             branch = branch_byte.decode('utf-8').strip()
         except Exception as e:
             # Fallback if Git isn't installed or this isn't a repo
-            self.logger.warning(f"Could not detect Git branch ({e}). Defaulting to 'dev'.")
             branch = 'bot/nonproduction'
 
         # 2. Set environment based on branch
@@ -60,7 +58,6 @@ class RunTests:
                 config = json.load(file)
             return config
         except Exception as e:
-            self.logger.error(f"Failed to load configuration: {e}")
             raise
 
     def run(self):
