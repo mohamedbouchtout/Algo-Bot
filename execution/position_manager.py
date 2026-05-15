@@ -24,7 +24,7 @@ class PositionManager:
     def monitor_positions(self):
         """Monitor and manage active positions"""
         # Get current positions from IB
-        ib_positions = self.ib.positions()
+        ib_positions = self.ib.run(self.ib.reqPositionsAsync())
         
         # Create set of symbols with actual positions (non-zero quantity)
         ib_symbols = {pos.contract.symbol for pos in ib_positions if pos.position != 0}
@@ -96,7 +96,9 @@ class PositionManager:
                 return out
             
             # Get actual IB positions to verify
-            ib_positions = self.ib.positions()
+            self.ib.reqPositions()
+            ib_positions = self.ib.run(self.ib.reqPositionsAsync())
+            self.ib.sleep(3)
             ib_symbols = {pos.contract.symbol for pos in ib_positions if pos.position != 0}
             
             # Load positions from JSON
