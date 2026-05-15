@@ -24,10 +24,10 @@ class TradingBot:
     TRAIN_INTERVAL = timedelta(days=6)
 
     def __init__(self):
-        self.logger = setup_logger(self.config, 'bot_logs', 'trading_bot.log')
         self.ib = IB()
         self.config = self.load_config()
         self.params = self.load_params()
+        self.logger = setup_logger(self.config, 'bot_logs', 'trading_bot.log')
         self.last_train_time: datetime | None = None
 
     def load_config(self):
@@ -39,7 +39,6 @@ class TradingBot:
             branch = branch_byte.decode('utf-8').strip()
         except Exception as e:
             # Fallback if Git isn't installed or this isn't a repo
-            self.logger.warning(f"Could not detect Git branch ({e}). Defaulting to 'dev'.")
             branch = 'bot/nonproduction'
 
         # 2. Set environment based on branch
@@ -52,7 +51,6 @@ class TradingBot:
                 config = json.load(file)
             return config
         except Exception as e:
-            self.logger.error(f"Failed to load configuration: {e}")
             raise
 
     def load_params(self):
@@ -63,7 +61,6 @@ class TradingBot:
                 params = json.load(file)
             return params
         except Exception as e:
-            self.logger.error(f"Failed to load parameters: {e}")
             raise
 
     def should_retrain(self, scheduler: Scheduler) -> bool:
