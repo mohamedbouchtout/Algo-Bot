@@ -3,10 +3,10 @@ Test script to verify breakout/retest pattern detection
 """
 
 import pandas as pd
-import numpy as np
 import logging
 from typing import Optional, Dict
 from strategy.retest_200ma.validators import TrendValidator
+from execution.risk_manager import RiskManager
 
 # Setup logging
 logger = logging.getLogger()
@@ -103,8 +103,11 @@ class TrendDetector:
                         if not recent_momentum:
                             continue
                     
+                    risk_manager = RiskManager(self.params)
+                    sl = risk_manager.get_stop_loss_pct(DF)
+                        
                     entry_price = close[-1]
-                    stop_loss = low[j] * (1 - self.params['strategy_retest_200ma']['stop_loss_pct'])
+                    stop_loss = low[j] * (1 - sl)
                     risk = entry_price - stop_loss
                     
                     if risk <= 0 or risk / entry_price > 0.05:
@@ -242,8 +245,11 @@ class TrendDetector:
                             if not recent_momentum:
                                 continue
                         
+                        risk_manager = RiskManager(self.params)
+                        sl = risk_manager.get_stop_loss_pct(DF)
+
                         entry_price = close[-1]
-                        stop_loss = high[j] * (1 + self.params['strategy_retest_200ma']['stop_loss_pct'])
+                        stop_loss = high[j] * (1 + sl)
                         risk = stop_loss - entry_price
                         
                         if risk <= 0 or risk / entry_price > 0.05:

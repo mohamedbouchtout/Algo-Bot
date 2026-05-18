@@ -3,13 +3,14 @@ Risk management: position sizing, cash reserves, max positions
 """
 
 import logging
+import yfinance as yf
+import pandas as pd
 
 # Setup logging
 logger = logging.getLogger()
 
 class RiskManager:
-    def __init__(self, config, params):
-        self.config = config
+    def __init__(self, params):
         self.params = params
     
     def can_take_trade(self, account_value, invested_amount, num_positions):
@@ -46,3 +47,28 @@ class RiskManager:
         """Check if trade fits within available cash"""
         trade_cost = shares * entry_price
         return trade_cost <= available_cash
+
+    def get_stop_loss_pct(self, df: pd.DataFrame) -> float:
+        # Fetch the VIX ticker object
+        vix_today = 20.0
+        try:
+            vix_ticker = yf.Ticker("^VIX")
+            vix_today = vix_ticker.fast_info['lastPrice']
+        except Exception as e:
+            logger.warning(f"Failed to fetch VIX data, defaulting to 20.0: {e}")
+
+        # Calculate the daily range percentage
+        close = df['close'].astype(float)
+        high = df['high'].astype(float)
+        low = df['low'].astype(float)
+        daily_range_pct = (high - low) / close
+        
+        sl = 0
+        if vix_today > 25:
+            sl = daily_range_pct.iloc[-1] * (self.params['strategy_retest_200ma']['ATR'] + 0.5)
+        elif vix_today < 15:
+            sl = daily_range_pct.iloc[-1] * (self.params['strategy_retest_200ma']['ATR'] - 0.5)
+        else:
+            sl = daily_range_pct.iloc[-1] * self.params['strategy_retest_200ma']['ATR']
+
+        return sl

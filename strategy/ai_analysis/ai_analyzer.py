@@ -37,8 +37,10 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+import yfinance as yf
 
 from data_fetch.historical_data import StockDataFetcher
+from execution.risk_manager import RiskManager
 from strategy.ai_analysis.data_preparation.feature_builder import FeatureBuilder
 from strategy.ai_analysis.rbm_trainer import RBMTrainer
 from strategy.ai_analysis.cnn_trainer import CNNTrainer
@@ -256,12 +258,15 @@ class AIAnalyzer:
         stop_loss = 0
         risk = 0
 
+        risk_manager = RiskManager(params)
+        sl = risk_manager.get_stop_loss_pct(df)
+
         if class_type == 'LONG':
-            stop_loss = df['close'].iloc[-1] * (1 - params['ai_analyzer']['stop_loss_pct'])
+            stop_loss = df['close'].iloc[-1] * (1 - sl)
             risk = entry_price - stop_loss
             target_price = entry_price + (risk * params['ai_analyzer']['risk_reward_ratio'])
         elif class_type == 'SHORT':
-            stop_loss = df['close'].iloc[-1] * (1 + params['ai_analyzer']['stop_loss_pct'])
+            stop_loss = df['close'].iloc[-1] * (1 + sl)
             risk = stop_loss - entry_price
             target_price = entry_price - (risk * params['ai_analyzer']['risk_reward_ratio'])
 
