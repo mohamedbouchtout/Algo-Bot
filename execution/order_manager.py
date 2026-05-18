@@ -126,7 +126,7 @@ class OrderManager:
             return
         
         # Get position size based on risk
-        risk_manager = RiskManager(self.config, self.params)
+        risk_manager = RiskManager(self.params)
         shares = risk_manager.calculate_position_size(net_liq, signal['entry'], signal['stop'])
 
         if shares > 0:

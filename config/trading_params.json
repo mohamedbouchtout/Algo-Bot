@@ -13,13 +13,15 @@
         "max_retest_volume_ratio": 0.5,
         "max_retest_volume_absolute": 0.8,
         "max_days_since_retest": 3,
-        "retest_distance": 0.005
+        "retest_distance": 0.005,
+        "ATR": 1.5
     },
     "ai_analyzer": {
         "confidence_threshold": 0.8,
         "risk_reward_ratio": 2.0,
         "stop_loss_pct": 0.03,
-        "lookback_days": 2000
+        "lookback_days": 2000,
+        "ATR": 1.5
     },
     "risk_management": {
         "risk_per_trade_pct": 0.05,
