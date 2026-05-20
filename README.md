@@ -274,6 +274,68 @@ PyTorch, scikit-learn, deepdish/h5py, tqdm, seaborn, cmocean). If you do not
 plan to use the AI pipeline you can comment those lines out in the file — the
 core trading bot itself does not import them.
 
+## 🚢 Docker
+You do not need a `docker-compose.yml` or any YAML file to run this application in a container. The provided `Dockerfile` is sufficient to build and run the bot.
+
+### Build the image
+```bash
+docker build -t algo-bot .
+```
+
+### Run the container (with auto-restart)
+For production deployments, use the `--restart` policy to ensure the container restarts automatically if it stops:
+
+```bash
+docker run --restart unless-stopped \
+  -v "$PWD/config:/app/config" \
+  -v "$PWD/data:/app/data" \
+  algo-bot
+```
+
+The `unless-stopped` policy means:
+- ✅ Container restarts on failure
+- ✅ Container restarts on system reboot
+- ✅ Container does NOT restart if you explicitly stop it
+
+### Quick test (no auto-restart)
+```bash
+docker run --rm algo-bot
+```
+
+### Optional runtime mounting
+Persist config and data outside the container:
+```bash
+docker run --restart unless-stopped \
+  -v "$PWD/config:/app/config" \
+  -v "$PWD/data:/app/data" \
+  algo-bot
+```
+
+### Alternative: docker-compose (optional)
+If you prefer compose, create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  algo-bot:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+```
+
+Then run:
+```bash
+docker-compose up -d
+```
+
+### Notes
+- `Dockerfile` uses `requirements.txt` to install dependencies.
+- `docker-compose.yml` is optional and only needed if you want a multi-service setup or prefer compose syntax.
+- `.dockerignore` is included to keep the image build clean and fast.
+- For production, always use a restart policy (`--restart unless-stopped` or compose equivalent).
+
 ### 3. Configure Environment (Optional)
 For email alerts, create a `.env` file in the project root:
 ```
