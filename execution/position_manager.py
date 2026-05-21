@@ -16,7 +16,7 @@ class PositionManager:
     def __init__(self, ib, alert_manager: AlertManager, config, params):
         self.ib = ib
         self.file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'positions.json')
-        self.active_positions = self.load_positions()  # Load existing positions from JSON
+        self.active_positions = {}
         self.config = config
         self.params = params
         self.alert_manager = alert_manager
@@ -25,36 +25,48 @@ class PositionManager:
         """Monitor and manage active positions"""
         # Get current positions from IB
         ib_positions = self.ib.run(self.ib.reqPositionsAsync())
-        
+        ib_portfolio = self.ib.portfolio()
+
         # Create set of symbols with actual positions (non-zero quantity)
         ib_symbols = {pos.contract.symbol for pos in ib_positions if pos.position != 0}
-        
+
+        # Build a lookup for portfolio data (has PnL info)
+        portfolio_by_symbol = {p.contract.symbol: p for p in ib_portfolio if p.position != 0}
+
         # Remove closed positions from our tracking
         closed_positions = []
         for symbol in list(self.active_positions.keys()):
             if symbol not in ib_symbols:
                 closed_positions.append(symbol)
                 position_info = self.active_positions[symbol]
-                
-                # Log the closed position
+                entry_price = position_info['signal']['entry']
+                shares = position_info['shares']
+
+                # Try to get realized PnL from portfolio snapshot taken before close
+                ib_pos = portfolio_by_symbol.get(symbol)
+                if ib_pos is not None:
+                    pnl = float(ib_pos.realizedPNL) if ib_pos.realizedPNL else 0.0
+                    exit_price = float(ib_pos.marketPrice)
+                else:
+                    pnl = 0.0
+                    exit_price = None
+                pnl_pct = (pnl / (entry_price * shares) * 100) if entry_price and shares else 0.0
+
                 logger.info(
                     f"Position closed: {symbol} ({position_info['signal']['type']}) - "
-                    f"Removing from active positions"
+                    f"PnL: ${pnl:.2f} ({pnl_pct:.2f}%)"
                 )
-                
-                # Remove from tracking
-                del self.active_positions[symbol]
 
-                # Remove from JSON
+                del self.active_positions[symbol]
                 self.remove_position(symbol)
                 self.alert_manager.alert_trade_exit(
-                    symbol = symbol,
-                    exit_type = position_info['signal']['type'],
-                    pnl = 0,
-                    pnl_pct = 0,
-                    entry_price = position_info['signal']['entry'],
-                    exit_price = None,
-                    shares = position_info['shares']
+                    symbol=symbol,
+                    exit_type=position_info['signal']['type'],
+                    pnl=pnl,
+                    pnl_pct=pnl_pct,
+                    entry_price=entry_price,
+                    exit_price=exit_price,
+                    shares=shares,
                 )
         
         # Log summary
@@ -65,10 +77,8 @@ class PositionManager:
         if self.active_positions:
             logger.info(f"Active positions: {len(self.active_positions)} stocks")
 
-            ib_portfolio = self.ib.portfolio()
             for symbol, info in self.active_positions.items():
-                # Find the position in IB data for P&L info
-                ib_pos = next((p for p in ib_portfolio if p.contract.symbol == symbol), None)
+                ib_pos = portfolio_by_symbol.get(symbol)
                 if ib_pos:
                     logger.info(
                         f"  {symbol}: {info['signal']['type']}, "

@@ -105,8 +105,7 @@ class OrderManager:
             if item.position != 0
         )
 
-        # Cash reserve requirement (30% must stay in cash)
-        max_investment_allowed = net_liq * 0.70  # Can invest up to 70%
+        max_investment_allowed = net_liq * self.params['risk_management']['max_investment_pct']
         available_to_invest = max_investment_allowed - invested_amount
         invested_pct = (invested_amount / net_liq * 100) if net_liq > 0 else 0
         
@@ -114,7 +113,7 @@ class OrderManager:
         logger.info(f"  Net Liquidation: ${net_liq:,.2f}")
         logger.info(f"  Cash Balance: ${cash_balance:,.2f}")
         logger.info(f"  Currently Invested: ${invested_amount:,.2f} ({invested_pct:.1f}%)")
-        logger.info(f"  Max Investment Allowed (70%): ${max_investment_allowed:,.2f}")
+        logger.info(f"  Max Investment Allowed ({self.params['risk_management']['max_investment_pct']*100:.0f}%): ${max_investment_allowed:,.2f}")
         logger.info(f"  Available to Invest: ${available_to_invest:,.2f}")
         
         # Check if we're already at max investment
@@ -175,8 +174,8 @@ class OrderManager:
             )
 
             # Submit children orders
-            self.ib.placeOrder(contract, take_profit)
-            self.ib.placeOrder(contract, stop_loss)
+            tp_trade = self.ib.placeOrder(contract, take_profit)
+            sl_trade = self.ib.placeOrder(contract, stop_loss)
 
             # Wait up to 600 s for the parent to fill.  Yields to the event loop.
             deadline = time.time() + 600
@@ -193,9 +192,9 @@ class OrderManager:
                     f"{symbol} parent order did NOT fill (status={status}). "
                     f"Cancelling bracket and skipping persistence."
                 )
-                for order in [parent_trade.order, take_profit, stop_loss]:
+                for trade in [parent_trade, tp_trade, sl_trade]:
                     try:
-                        self.ib.cancelOrder(order)
+                        self.ib.cancelOrder(trade.order)
                     except Exception as cancel_err:
                         logger.error(f"Failed to cancel order: {cancel_err}")
 

@@ -24,9 +24,10 @@
         "ATR": 1.5
     },
     "risk_management": {
-        "risk_per_trade_pct": 0.05,
+        "risk_per_trade_pct": 0.03,
         "max_investment_pct": 0.70,
-        "max_positions": 10
+        "max_positions": 10,
+        "max_position_pct": 0.20
     },
     "timing": {
         "scan_interval": 1800,

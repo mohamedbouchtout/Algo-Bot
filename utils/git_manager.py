@@ -25,16 +25,10 @@ class GitManager:
         now = datetime.now()
         already_checked_today = last_git_check.date() == now.date()
 
-        # Only commit once per hour
-        # if (datetime.now() - last_git_check).total_seconds() > self.config['git']['commit_interval']:
-        #     self.git_commit_and_push("Auto-commit: Trading bot update")
-        #     last_git_check = datetime.now()
-        
-        # Check for updates only once per day and after market close
-        if force_check or (now.hour >= 16 and not already_checked_today):  # After market close
+        if force_check or (now.hour >= 16 and not already_checked_today):
             if self.check_for_updates():
-                logger.info("Updating and restarting bot to apply new changes...")
                 if self.pull_updates():
+                    logger.info("Updates pulled, restarting bot to apply new code...")
                     self.connection_manager.restart_bot()
             last_git_check = now
 

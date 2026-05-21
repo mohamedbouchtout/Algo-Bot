@@ -40,8 +40,7 @@ class ConnectionManager:
                 # Set market data type
                 self.ib.reqMarketDataType(3)  # Delayed/free data
                 
-                # Load positions and STORE the manager
-                self.position_manager.load_positions()
+                self.position_manager.active_positions = self.position_manager.load_positions()
                 
                 return True
                 
@@ -75,14 +74,21 @@ class ConnectionManager:
     
     def ensure_connected(self) -> bool:
         """Ensure IB connection is active, reconnect if needed"""
-        if not self.ib.isConnected():
-            logger.warning("IB connection lost. Reconnecting...")
+        if self.ib.isConnected():
+            return True
+
+        logger.warning("IB connection lost. Reconnecting...")
+
+        ports_to_try = [self.port] if self.port != 0 else self.ports
+        for port in ports_to_try:
             try:
-                self.ib.connect(self.host, self.port, clientId=self.client_id)
+                self.ib.connect(self.host, port, clientId=self.client_id)
+                self.port = port
                 self.ib.reqMarketDataType(3)
-                logger.info("Reconnected to IB")
+                self.position_manager.active_positions = self.position_manager.load_positions()
+                logger.info(f"Reconnected to IB on port {port}")
                 return True
             except Exception as e:
-                logger.error(f"Reconnection failed: {e}")
-                return False
-        return True
+                logger.error(f"Reconnection failed on port {port}: {e}")
+                continue
+        return False

@@ -91,9 +91,10 @@ class TrendDetector:
                         continue
 
                     # Step 3: Check if price bounced up (current price above retest low)
-                    if j < len(DF) - 1:
-                        bounce_strength = (close[-1] - low[j]) / low[j]
-                    
+                    if j >= len(DF) - 1:
+                        continue
+                    bounce_strength = (close[-1] - low[j]) / low[j]
+
                     if bounce_strength < self.params['strategy_retest_200ma']['min_bounce_strength']:
                         continue
                     
@@ -230,71 +231,71 @@ class TrendDetector:
                         continue
 
                     # Step 3: Check if price bounced down (current price below retest high)
-                    if j < len(DF) - 1:
-                        bounced = close[-1] < low[j]
-                        
-                        if bounced:
-                            bounce_strength = (high[j] - close[-1]) / high[j]
-                    
-                        if bounce_strength < self.params['strategy_retest_200ma']['min_bounce_strength']:
-                            continue
-                        
-                        # Downward momentum
-                        if len(close) >= 2:
-                            recent_momentum = close[-1] < close[-2]
-                            if not recent_momentum:
-                                continue
-                        
-                        risk_manager = RiskManager(self.params)
-                        sl = risk_manager.get_stop_loss_pct(DF)
+                    if j >= len(DF) - 1:
+                        continue
+                    if close[-1] >= low[j]:
+                        continue
+                    bounce_strength = (high[j] - close[-1]) / high[j]
 
-                        entry_price = close[-1]
-                        stop_loss = high[j] * (1 + sl)
-                        risk = stop_loss - entry_price
-                        
-                        if risk <= 0 or risk / entry_price > 0.05:
-                            continue
-                        
-                        target_price = entry_price - (risk * self.params['strategy_retest_200ma']['risk_reward_ratio'])
-                        
-                        # Recent retest
-                        days_since_retest = len(DF) - 1 - j
-                        if days_since_retest > self.params['strategy_retest_200ma']['max_days_since_retest']:
-                            continue
-                        
-                        # Calculate MA slope
-                        ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
+                    if bounce_strength < self.params['strategy_retest_200ma']['min_bounce_strength']:
+                        continue
 
-                        # Format prices based on price level
-                        if entry_price < 1:
-                            entry_price = round(entry_price, 4)
-                            target_price = round(target_price, 4)
-                            stop_loss = round(stop_loss, 4)
-                        else:
-                            entry_price = round(entry_price, 2)
-                            target_price = round(target_price, 2)
-                            stop_loss = round(stop_loss, 2)
-                        
-                        logger.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
-                        return {
-                            'strategy_type': '200ma_retest',
-                            'type': 'SHORT',
-                            'symbol': DF['symbol'].iloc[0],
-                            'entry': entry_price,
-                            'stop': stop_loss,
-                            'target': target_price,
-                            'risk': risk,
-                            'reward': risk * self.params['strategy_retest_200ma']['risk_reward_ratio'],
-                            'breakout_date': DF.iloc[breakout_idx]['date'],
-                            'retest_date': DF.iloc[j]['date'],
-                            'current_date': DF.iloc[-1]['date'],
-                            'breakdown_volume_ratio': volume_ratio,
-                            'retest_volume_ratio': retest_volume_ratio,
-                            'avg_volume': avg_volume,
-                            'bounce_strength': bounce_strength,
-                            'breakdown_strength': breakdown_strength,
-                            'ma_slope': ma_slope,
-                            'ma_slope_pct': ma_slope * 100
-                        }
+                    # Downward momentum
+                    if len(close) >= 2:
+                        recent_momentum = close[-1] < close[-2]
+                        if not recent_momentum:
+                            continue
+
+                    risk_manager = RiskManager(self.params)
+                    sl = risk_manager.get_stop_loss_pct(DF)
+
+                    entry_price = close[-1]
+                    stop_loss = high[j] * (1 + sl)
+                    risk = stop_loss - entry_price
+
+                    if risk <= 0 or risk / entry_price > 0.05:
+                        continue
+
+                    target_price = entry_price - (risk * self.params['strategy_retest_200ma']['risk_reward_ratio'])
+
+                    # Recent retest
+                    days_since_retest = len(DF) - 1 - j
+                    if days_since_retest > self.params['strategy_retest_200ma']['max_days_since_retest']:
+                        continue
+
+                    # Calculate MA slope
+                    ma_slope = trend_validator.calculate_ma_slope(ma200, len(DF) - 1)
+
+                    # Format prices based on price level
+                    if entry_price < 1:
+                        entry_price = round(entry_price, 4)
+                        target_price = round(target_price, 4)
+                        stop_loss = round(stop_loss, 4)
+                    else:
+                        entry_price = round(entry_price, 2)
+                        target_price = round(target_price, 2)
+                        stop_loss = round(stop_loss, 2)
+
+                    logger.info(f"Short pattern detected on {DF['symbol'].iloc[0]}")
+                    return {
+                        'strategy_type': '200ma_retest',
+                        'type': 'SHORT',
+                        'symbol': DF['symbol'].iloc[0],
+                        'entry': entry_price,
+                        'stop': stop_loss,
+                        'target': target_price,
+                        'risk': risk,
+                        'reward': risk * self.params['strategy_retest_200ma']['risk_reward_ratio'],
+                        'breakout_date': DF.iloc[breakout_idx]['date'],
+                        'retest_date': DF.iloc[j]['date'],
+                        'current_date': DF.iloc[-1]['date'],
+                        'breakdown_volume_ratio': volume_ratio,
+                        'retest_volume_ratio': retest_volume_ratio,
+                        'avg_volume': avg_volume,
+                        'bounce_strength': bounce_strength,
+                        'breakdown_strength': breakdown_strength,
+                        'ma_slope': ma_slope,
+                        'ma_slope_pct': ma_slope * 100
+                    }
         
         return None
