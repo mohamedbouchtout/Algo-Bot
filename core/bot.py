@@ -4,6 +4,7 @@ Coordinates all modules
 """
 
 import subprocess
+import time as _time
 from datetime import datetime, timedelta
 import os
 import json
@@ -46,22 +47,16 @@ class TradingBot:
         env = 'prod' if branch in ['bot/production', 'origin/bot/production'] else 'dev'
         file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/{env}.json')
         
-        try:
-            with open(file_path, 'r') as file:
-                config = json.load(file)
-            return config
-        except Exception as e:
-            raise
+        with open(file_path, 'r') as file:
+            config = json.load(file)
+        return config
 
     def load_params(self):
         """Load parameters from JSON file"""
-        try:
-            file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/trading_params.json')
-            with open(file_path, 'r') as file:
-                params = json.load(file)
-            return params
-        except Exception as e:
-            raise
+        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/trading_params.json')
+        with open(file_path, 'r') as file:
+            params = json.load(file)
+        return params
 
     def should_retrain(self, scheduler: Scheduler) -> bool:
         # Cold start, no model exists, train regardless of day
@@ -89,7 +84,7 @@ class TradingBot:
                         if ai_analyzers[sector].add_ticker(ticker):
                             added += 1
                             addedPerSector += 1
-                        self.ib.sleep(1)
+                        _time.sleep(1)
                 self.logger.info(f"Added {addedPerSector} tickers for {sector} sector")
             
             for ai_analyzer in ai_analyzers.values():
@@ -127,48 +122,52 @@ class TradingBot:
             last_git_check = datetime.now()
             last_git_check = git_manager.git(last_git_check, force_check=True)
 
+            max_connect_retries = 10
+            connect_attempts = 0
             while not connection_manager.connect():
-                self.logger.warning("Cannot connect to IB - will retry in 1 minute")
-                self.ib.sleep(60)  # 1 minute
+                connect_attempts += 1
+                if connect_attempts >= max_connect_retries:
+                    self.logger.error(f"Failed to connect after {max_connect_retries} attempts, exiting")
+                    alert_manager.alert_error("Connection Failed", f"Could not connect to IB after {max_connect_retries} attempts")
+                    return
+                self.logger.warning(f"Cannot connect to IB - will retry in 1 minute (attempt {connect_attempts}/{max_connect_retries})")
+                self.ib.sleep(60)
         
             # Cold-start training if no model exists
             if self.should_retrain(scheduler):
                 self.train_modules(ai_analyzers, stock_fetcher)
 
             while True:
-                if scheduler.is_market_hours() and connection_manager.ensure_connected():
-                    self.logger.info(f"Market is open. Scanning for signals...")
+                market_open = scheduler.is_market_hours()
+                connected = connection_manager.ensure_connected()
 
-                    # Scan and execute new signals
+                if market_open and connected:
+                    self.logger.info(f"Market is open.Scanning for signals...")
+
                     order_manager.scan_stocks(stock_fetcher.categorized_stocks)
-                    
-                    # Monitor existing positions
                     position_manager.monitor_positions()
-                    
-                    # Git operations
-                    last_git_check = git_manager.git(last_git_check)  # Update last_git_check if it was changed
+                    last_git_check = git_manager.git(last_git_check)
 
-                    # Wait before next scan
                     self.logger.info(f"Waiting {self.params['timing']['scan_interval']} seconds until next scan...")
                     self.ib.sleep(self.params['timing']['scan_interval'])
 
-                elif not scheduler.is_market_hours() and not connection_manager.ensure_connected():
-                    self.logger.warning("Cannot connect to IB and market is closed - will retry in 30 minutes")
-                    last_git_check = git_manager.git(last_git_check)  # Update last_git_check if it was changed
-                    self.ib.sleep(1800)  # 30 minutes
-                elif not connection_manager.ensure_connected():
+                elif market_open and not connected:
                     self.logger.warning("Cannot connect to IB - will retry in 1 minute")
-                    last_git_check = git_manager.git(last_git_check)  # Update last_git_check if it was changed
-                    self.ib.sleep(60)  # 1 minute
-                else:
-                    self.logger.info(f"Market is closed. Next check in 30 minutes...")
-                    last_git_check = git_manager.git(last_git_check)  # Update last_git_check if it was changed
+                    last_git_check = git_manager.git(last_git_check)
+                    self.ib.sleep(60)
 
-                    # Train AI modules on weekends when market is closed
+                else:
+                    if not connected:
+                        self.logger.warning("Market is closed and IB disconnected. Next check in 30 minutes...")
+                    else:
+                        self.logger.info(f"Market is closed. Next check in 30 minutes...")
+
+                    last_git_check = git_manager.git(last_git_check)
+
                     if self.should_retrain(scheduler):
                         self.train_modules(ai_analyzers, stock_fetcher)
 
-                    self.ib.sleep(1800)  # 30 minutes
+                    self.ib.sleep(1800)
                     
         except KeyboardInterrupt:
             self.logger.info("Bot stopped by user")
@@ -177,4 +176,4 @@ class TradingBot:
             self.logger.error(f"Bot error: {e}")
             alert_manager.alert_error(str(e), "Unexpected bot error thrown.")
         finally:
-            connection_manager.disconnect()
+            connection_manager.disconnect() 

@@ -22,9 +22,9 @@ class StockDataFetcher:
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
             
-            duration = ""
+            import math
             if lookback_days > 365:
-                duration = f'{lookback_days // 365} Y'
+                duration = f'{math.ceil(lookback_days / 365)} Y'
             else:
                 duration = f'{lookback_days} D'
 

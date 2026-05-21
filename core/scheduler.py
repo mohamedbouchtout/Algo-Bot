@@ -34,4 +34,4 @@ class Scheduler:
         market_close = time(16, 0)
         current_time = now.time()
         
-        return market_open <= current_time <= market_close
+        return market_open <= current_time < market_close
