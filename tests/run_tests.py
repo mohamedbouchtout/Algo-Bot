@@ -29,13 +29,10 @@ class RunTests:
 
     def load_params(self):
         """Load parameters from JSON file"""
-        try:
-            file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/trading_params.json')
-            with open(file_path, 'r') as file:
-                params = json.load(file)
-            return params
-        except Exception as e:
-            raise
+        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/trading_params.json')
+        with open(file_path, 'r') as file:
+            params = json.load(file)
+        return params
 
     def load_config(self):
         """Load configuration from JSON file"""
@@ -53,12 +50,15 @@ class RunTests:
         env = 'prod' if branch in ['bot/production', 'origin/bot/production'] else 'dev'
         file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/{env}.json')
         
-        try:
-            with open(file_path, 'r') as file:
-                config = json.load(file)
-            return config
-        except Exception as e:
-            raise
+        with open(file_path, 'r') as file:
+            config = json.load(file)
+
+        # If running in a container, override host to use Docker DNS
+        if os.getenv('RUNNING_IN_CONTAINER') == 'true':
+            config['ib']['host'] = 'host.docker.internal'
+            self.logger.info("Running in container - using host.docker.internal for IB")
+
+        return config
 
     def run(self):
         """Runs all the test classes"""
