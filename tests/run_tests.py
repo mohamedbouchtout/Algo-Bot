@@ -54,9 +54,21 @@ class RunTests:
             config = json.load(file)
 
         # If running in a container, override host to use Docker DNS
-        if os.getenv('RUNNING_IN_CONTAINER') == 'true':
-            config['ib']['host'] = 'host.docker.internal'
-            self.logger.info("Running in container - using host.docker.internal for IB")
+        running_in_container = os.getenv('RUNNING_IN_CONTAINER', '').lower() == 'true'
+        if not running_in_container:
+            try:
+                running_in_container = os.path.exists('/.dockerenv')
+            except Exception:
+                running_in_container = False
+        if not running_in_container:
+            try:
+                with open('/proc/1/cgroup', 'r') as cgroup_file:
+                    running_in_container = 'docker' in cgroup_file.read() or 'kubepods' in cgroup_file.read()
+            except Exception:
+                running_in_container = running_in_container
+
+        if running_in_container:
+            config['ib']['host'] = os.getenv('IB_HOST_CONTAINER', 'host.docker.internal')
 
         return config
 
