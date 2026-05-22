@@ -49,6 +49,12 @@ class TradingBot:
         
         with open(file_path, 'r') as file:
             config = json.load(file)
+
+        # If running in a container, override host to use Docker DNS
+        if os.getenv('RUNNING_IN_CONTAINER') == 'true':
+            config['ib']['host'] = 'host.docker.internal'
+            self.logger.info("Running in container - using host.docker.internal for IB")
+
         return config
 
     def load_params(self):
