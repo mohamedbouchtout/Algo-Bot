@@ -4,7 +4,6 @@ Coordinates all modules
 """
 
 import subprocess
-import time as _time
 from datetime import datetime, timedelta
 import os
 import json
@@ -102,7 +101,7 @@ class TradingBot:
                         if ai_analyzers[sector].add_ticker(ticker):
                             added += 1
                             addedPerSector += 1
-                        _time.sleep(1)
+                        self.ib.sleep(1)
                 self.logger.info(f"Added {addedPerSector} tickers for {sector} sector")
             
             for ai_analyzer in ai_analyzers.values():
@@ -176,16 +175,16 @@ class TradingBot:
 
                 else:
                     if not connected:
-                        self.logger.warning("Market is closed and IB disconnected. Next check in 30 minutes...")
+                        self.logger.warning("Market is closed and IB disconnected. Next check in 10 minutes...")
                     else:
-                        self.logger.info(f"Market is closed. Next check in 30 minutes...")
+                        self.logger.info(f"Market is closed. Next check in 10 minutes...")
 
                     last_git_check = git_manager.git(last_git_check)
 
                     if self.should_retrain(scheduler):
                         self.train_modules(ai_analyzers, stock_fetcher)
 
-                    self.ib.sleep(1800)
+                    self.ib.sleep(600)
                     
         except KeyboardInterrupt:
             self.logger.info("Bot stopped by user")

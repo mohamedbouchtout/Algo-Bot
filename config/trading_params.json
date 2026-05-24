@@ -30,7 +30,7 @@
         "max_position_pct": 0.20
     },
     "timing": {
-        "scan_interval": 1800,
+        "scan_interval": 600,
         "market_check_interval": 900
     }
 }

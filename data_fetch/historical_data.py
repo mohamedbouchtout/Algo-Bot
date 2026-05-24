@@ -6,6 +6,7 @@ import logging
 from ib_insync import *
 from typing import Dict, List, Optional
 import pandas as pd
+import math
 
 # Setup logging
 logger = logging.getLogger()
@@ -22,7 +23,6 @@ class StockDataFetcher:
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
             
-            import math
             if lookback_days > 365:
                 duration = f'{math.ceil(lookback_days / 365)} Y'
             else:

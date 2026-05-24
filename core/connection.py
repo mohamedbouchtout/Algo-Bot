@@ -79,8 +79,7 @@ class ConnectionManager:
 
         logger.warning("IB connection lost. Reconnecting...")
 
-        ports_to_try = [self.port] if self.port != 0 else self.ports
-        for port in ports_to_try:
+        for port in self.ports:
             try:
                 self.ib.connect(self.host, port, clientId=self.client_id)
                 self.port = port
