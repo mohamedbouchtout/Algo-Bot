@@ -56,8 +56,8 @@ class OrderManager:
                                 ai_signal = self.ai_analyzers[sector].construct_signal(df, self.params, class_type, prediction['probs'][class_type])
                                 if ai_signal:
                                     self.execute_signal(ai_signal)  # Execute immediately for each signal
-                                    logger.info("Waiting 3 minutes after executing signal...")
-                                    self.ib.sleep(180)  # Small delay to avoid rate limiting
+                                    logger.info("Waiting 1 minute after executing signal...")
+                                    self.ib.sleep(60)  # Small delay to avoid rate limiting
                                     continue
                     except RuntimeError as e:
                         logger.warning(f"AI prediction failed for {ticker} (not trained): {e}")
@@ -76,13 +76,10 @@ class OrderManager:
                                 f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
                         
                         self.execute_signal(signal)  # Execute immediately for each signal
-                        logger.info("Waiting 3 minutes after executing signal...")
-                        self.ib.sleep(180)  # Small delay to avoid rate limiting
+                        logger.info("Waiting 1 minute after executing signal...")
+                        self.ib.sleep(60)  # Small delay to avoid rate limiting
                     else:
                         logger.info(f"No signal found for {ticker}")
-                    
-                    # Small delay to avoid rate limiting
-                    self.ib.sleep(1)
 
     def execute_signal(self, signal: Dict):
         """Execute trading signals"""

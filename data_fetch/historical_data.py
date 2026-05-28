@@ -49,3 +49,5 @@ class StockDataFetcher:
         except Exception as e:
             logger.warning(f"Failed to get data for {symbol}: {e}")
             return None
+        finally:
+            self.ib.sleep(15)  # Sleep to respect rate limits

@@ -101,7 +101,6 @@ class TradingBot:
                         if ai_analyzers[sector].add_ticker(ticker):
                             added += 1
                             addedPerSector += 1
-                        self.ib.sleep(1)
                 self.logger.info(f"Added {addedPerSector} tickers for {sector} sector")
             
             for ai_analyzer in ai_analyzers.values():
@@ -159,7 +158,7 @@ class TradingBot:
                 connected = connection_manager.ensure_connected()
 
                 if market_open and connected:
-                    self.logger.info(f"Market is open.Scanning for signals...")
+                    self.logger.info(f"Market is open. Scanning for signals...")
 
                     order_manager.scan_stocks(stock_fetcher.categorized_stocks)
                     position_manager.monitor_positions()
