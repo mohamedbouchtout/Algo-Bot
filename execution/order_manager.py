@@ -27,44 +27,21 @@ class OrderManager:
         self.config = config
         self.params = params
 
-    def _fetch_account_snapshot(self) -> Dict:
-        """Fetch account info once per scan cycle to avoid IB subscription limits."""
-        account_values = self.ib.accountValues()
-        net_liq = 0.0
-        cash_balance = 0.0
-        for item in account_values:
-            if item.tag == 'NetLiquidation' and item.currency == 'USD':
-                net_liq = float(item.value)
-            elif item.tag == 'TotalCashValue' and item.currency == 'USD':
-                cash_balance = float(item.value)
-
-        current_positions = [p for p in self.ib.portfolio() if p.position != 0]
-        invested_amount = sum(
-            abs(p.position * p.marketPrice) for p in current_positions
-        )
-
-        return {
-            'net_liq': net_liq,
-            'cash_balance': cash_balance,
-            'invested_amount': invested_amount,
-            'current_positions': current_positions,
-        }
-
     def scan_stocks(self, categorized_stocks: Dict[str, Dict[str, list]]):
         """Scan all stocks for trading signals"""
         logger.info("Scanning all stocks...")
 
-        account = self._fetch_account_snapshot()
-
         for sector, industries in categorized_stocks.items():
             for industry, tickers in industries.items():
                 for ticker in tickers:
+                    # Skip if we already have a position
                     if ticker in self.position_manager.active_positions:
                         continue
-
+                    
+                    # Get historical data
                     logger.info(f"Testing {ticker}...")
                     df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['lookback_days'])
-
+                    
                     if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
                         continue
 
@@ -78,10 +55,9 @@ class OrderManager:
 
                                 ai_signal = self.ai_analyzers[sector].construct_signal(df, self.params, class_type, prediction['probs'][class_type])
                                 if ai_signal:
-                                    self.execute_signal(ai_signal, account)
-                                    account = self._fetch_account_snapshot()
-                                    logger.info("Waiting 3 minutes after executing signal...")
-                                    self.ib.sleep(180)
+                                    self.execute_signal(ai_signal)  # Execute immediately for each signal
+                                    logger.info("Waiting 1 minute after executing signal...")
+                                    self.ib.sleep(60)  # Small delay to avoid rate limiting
                                     continue
                     except RuntimeError as e:
                         logger.warning(f"AI prediction failed for {ticker} (not trained): {e}")
@@ -98,27 +74,38 @@ class OrderManager:
                         logger.info(f"Signal found: {signal['type']} {ticker} @ ${signal['entry']:.2f}, "
                                 f"Breakout Vol: {signal['breakout_volume_ratio']:.2f}x, "
                                 f"Retest Vol: {signal['retest_volume_ratio']:.2f}x")
-
-                        self.execute_signal(signal, account)
-                        account = self._fetch_account_snapshot()
-                        logger.info("Waiting 3 minutes after executing signal...")
-                        self.ib.sleep(180)
+                        
+                        self.execute_signal(signal)  # Execute immediately for each signal
+                        logger.info("Waiting 1 minute after executing signal...")
+                        self.ib.sleep(60)  # Small delay to avoid rate limiting
                     else:
                         logger.info(f"No signal found for {ticker}")
 
-                    self.ib.sleep(1)
-
-    def execute_signal(self, signal: Dict, account: Dict):
-        """Execute trading signals using pre-fetched account snapshot."""
-        net_liq = account['net_liq']
-        cash_balance = account['cash_balance']
-        invested_amount = account['invested_amount']
-        current_positions = account['current_positions']
+    def execute_signal(self, signal: Dict):
+        """Execute trading signals"""
+        # Get account info to determine position sizing
+        account_summary = self.ib.accountSummary()
+        net_liq = 0
+        cash_balance = 0
+        
+        for item in account_summary:
+            if item.tag == 'NetLiquidation':
+                net_liq = float(item.value)
+            elif item.tag == 'TotalCashValue':
+                cash_balance = float(item.value)
+        
+        # Calculate current invested amount
+        current_positions = [p for p in self.ib.portfolio() if p.position != 0]
+        invested_amount = sum(
+            abs(item.position * item.marketPrice)
+            for item in self.ib.portfolio()
+            if item.position != 0
+        )
 
         max_investment_allowed = net_liq * self.params['risk_management']['max_investment_pct']
         available_to_invest = max_investment_allowed - invested_amount
         invested_pct = (invested_amount / net_liq * 100) if net_liq > 0 else 0
-
+        
         logger.info(f"Account Summary:")
         logger.info(f"  Net Liquidation: ${net_liq:,.2f}")
         logger.info(f"  Cash Balance: ${cash_balance:,.2f}")
