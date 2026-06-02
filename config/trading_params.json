@@ -20,7 +20,7 @@
         "confidence_threshold": 0.75,
         "risk_reward_ratio": 2.0,
         "stop_loss_pct": 0.03,
-        "lookback_days": 2000,
+        "lookback_days": 1825,
         "ATR": 1.5
     },
     "risk_management": {
