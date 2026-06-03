@@ -1,53 +1,65 @@
 """
-Gets stock historical data from IB and stock list
+Gets stock historical data using yfinance (no rate limits).
 """
 
 import logging
-from ib_insync import *
-from typing import Dict, List, Optional
+from typing import Optional
 import pandas as pd
-import math
+import yfinance as yf
 
-# Setup logging
+# Set up logging
 logger = logging.getLogger()
 
 class StockDataFetcher:
-    def __init__(self, ib, config, params):
+    def __init__(self, ib=None, config=None, params=None):
         self.ib = ib
         self.config = config
         self.params = params
 
     def get_historical_data(self, symbol: str, lookback_days: int) -> Optional[pd.DataFrame]:
-        """Fetch historical daily data for a stock"""
+        """Fetch historical daily data for a stock via yfinance."""
         try:
-            contract = Stock(symbol, 'SMART', 'USD')
-            self.ib.qualifyContracts(contract)
-            
-            if lookback_days > 365:
-                duration = f'{math.ceil(lookback_days / 365)} Y'
-            else:
-                duration = f'{lookback_days} D'
+            period = self._lookback_to_period(lookback_days)
+            ticker = yf.Ticker(symbol)
+            df = ticker.history(period=period, auto_adjust=True)
 
-            bars = self.ib.reqHistoricalData(
-                contract,
-                endDateTime='',
-                durationStr=duration,
-                barSizeSetting='1 day',
-                whatToShow='TRADES',
-                useRTH=True,
-                formatDate=1
-            )
-            
-            if not bars:
+            if df is None or df.empty:
                 return None
-            
-            # Convert to DataFrame
-            df = util.df(bars)
+
+            df = df.rename(columns={
+                'Open': 'open',
+                'High': 'high',
+                'Low': 'low',
+                'Close': 'close',
+                'Volume': 'volume',
+            })
+
+            df = df[['open', 'high', 'low', 'close', 'volume']]
+            df['date'] = df.index
+            df = df.reset_index(drop=True)
             df['symbol'] = symbol
+
             return df
-            
+
         except Exception as e:
             logger.warning(f"Failed to get data for {symbol}: {e}")
             return None
-        finally:
-            self.ib.sleep(15)  # Sleep to respect rate limits
+
+    @staticmethod
+    def _lookback_to_period(lookback_days: int) -> str:
+        if lookback_days <= 5:
+            return '5d'
+        elif lookback_days <= 30:
+            return '1mo'
+        elif lookback_days <= 90:
+            return '3mo'
+        elif lookback_days <= 180:
+            return '6mo'
+        elif lookback_days <= 365:
+            return '1y'
+        elif lookback_days <= 730:
+            return '2y'
+        elif lookback_days <= 1825:
+            return '5y'
+        else:
+            return '10y'
