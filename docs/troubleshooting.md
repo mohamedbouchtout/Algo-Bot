@@ -6,7 +6,7 @@
 
 - Ensure TWS or IB Gateway is running
 - Check that API access is enabled in TWS/Gateway settings
-- Verify the port matches your config (`4002`/`7497` for paper, `4001`/`7496` for live)
+- Verify at least one port in `config.json` matches your TWS/Gateway (`4002`/`7497` for paper, `4001`/`7496` for live)
 - Check that "Allow connections from localhost" is enabled
 
 ### Connection Drops During Off-Hours
@@ -42,9 +42,8 @@ IB drops idle connections. The bot automatically reconnects when this happens. I
 
 ### "Failed to load configuration"
 
-- Check JSON syntax in config files (missing commas, trailing commas)
-- Ensure `config/dev.json` and `config/prod.json` exist
-- Verify git is installed (used for branch detection to select config)
+- Check JSON syntax in `config/config.json` (missing commas, trailing commas)
+- Ensure `config/config.json` exists
 
 ### "FileNotFoundError" for stock_list.txt or positions.json
 

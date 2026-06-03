@@ -1,21 +1,14 @@
 # Configuration
 
-The bot uses JSON files in the `config/` directory. The active config is selected automatically based on the current git branch.
+The bot uses a single config file at `config/config.json`. Paper vs live trading is determined by which TWS or IB Gateway instance you have running — the bot tries all configured ports in order and connects to the first one available.
 
-## Environment Selection
-
-| Branch | Config File | Typical Use |
-|--------|------------|-------------|
-| `bot/production` | `config/prod.json` | Live or paper trading in production |
-| Any other branch | `config/dev.json` | Development and testing |
-
-## IBKR Connection (`dev.json` / `prod.json`)
+## IBKR Connection
 
 ```json
 {
   "ib": {
     "host": "127.0.0.1",
-    "ports": [4002, 7497],
+    "ports": [4002, 7497, 4001, 7496],
     "client_id": 1
   }
 }
@@ -24,7 +17,7 @@ The bot uses JSON files in the `config/` directory. The active config is selecte
 | Field | Description |
 |-------|-------------|
 | `host` | IB Gateway / TWS host address |
-| `ports` | Ports to try in order. `4002`/`4001` = Gateway, `7497`/`7496` = TWS |
+| `ports` | Ports to try in order. `4002`/`4001` = Gateway, `7497`/`7496` = TWS. Paper ports are listed first by default |
 | `client_id` | API client ID. Use different IDs for simultaneous connections |
 
 ## Logging
@@ -62,7 +55,6 @@ Requires `GMAIL_USER` and `GMAIL_PASSWORD` environment variables. See [Installat
 {
   "git": {
     "enabled": true,
-    "branch": "bot/nonproduction",
     "main_branch": "main",
     "commit_interval": 3600,
     "update_check_interval": 21600
@@ -70,7 +62,7 @@ Requires `GMAIL_USER` and `GMAIL_PASSWORD` environment variables. See [Installat
 }
 ```
 
-The bot checks for remote updates once per day after market close (4 PM ET). If new commits are found on `main_branch`, it pulls and restarts automatically.
+The bot runs on the `main` branch. It checks for remote updates on startup and once per day after market close (4 PM ET). If new commits are found on `main`, it pulls (via rebase) and restarts automatically.
 
 ## Trading Parameters (`trading_params.json`)
 

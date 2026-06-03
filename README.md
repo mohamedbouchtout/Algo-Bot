@@ -35,7 +35,7 @@ Algo-Bot/
 ├── main.py                  # Entry point
 ├── config/                  # Environment + strategy configs
 ├── core/                    # Bot orchestrator, IB connection, scheduler
-├── data_fetch/              # Stock list + historical data from IB
+├── data_fetch/              # Stock list + historical data (via yfinance)
 ├── execution/               # Order placement, position tracking, risk management
 ├── strategy/
 │   ├── retest_200ma/        # 200 MA breakout/retest pattern detection

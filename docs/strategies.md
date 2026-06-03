@@ -49,7 +49,7 @@ An optional machine learning pipeline that classifies each ticker as LONG, FLAT,
 ### Architecture
 
 ```
-OHLCV bars (from IB)
+OHLCV bars (from yfinance)
     |
     v
 Feature Extractors (17 scale-free features per bar)
@@ -114,15 +114,11 @@ The training pipeline:
 ### Standalone Usage
 
 ```python
-from ib_insync import IB
 from data_fetch.historical_data import StockDataFetcher
 from strategy.ai_analysis.ai_analyzer import AIAnalyzer
 from strategy.ai_analysis.data_preparation.feature_builder import FeatureBuilder
 
-ib = IB()
-ib.connect('127.0.0.1', 4002, clientId=9)
-
-data = StockDataFetcher(ib, config, params)
+data = StockDataFetcher()
 analyzer = AIAnalyzer(
     stock_data=data,
     feature_builder=FeatureBuilder(window_size=10, n_bits=4),
@@ -165,4 +161,4 @@ results/
 
 - **More data is better**: The default `lookback_days = 250` leaves only ~15 usable windows per ticker after MA warm-up. For better training, use `lookback_days = 2000` or more.
 - **Class imbalance**: FLAT usually dominates. Watch the `class counts` log line and tune `label_threshold` / `forward_horizon` if needed.
-- **Use a dedicated `clientId`** when running standalone AI training so it doesn't interfere with a live bot session.
+- Historical data is fetched via yfinance (no IB connection or rate limits required for data).

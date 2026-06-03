@@ -53,7 +53,7 @@ You must use a Gmail **App Password**, not your regular password. To generate on
 2. Go to [Google App Passwords](https://myaccount.google.com/apppasswords)
 3. Generate a new app password for "Mail"
 
-Then enable alerts in your config file (`config/dev.json` or `config/prod.json`):
+Then enable alerts in `config/config.json`:
 
 ```json
 {

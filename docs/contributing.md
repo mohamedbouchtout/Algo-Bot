@@ -63,7 +63,7 @@ main.py
 
 Key design decisions:
 - **One IB instance** shared across all modules via dependency injection
-- **Config/params separation**: Connection settings in `dev.json`/`prod.json`, strategy parameters in `trading_params.json`
+- **Config/params separation**: Connection settings in `config.json`, strategy parameters in `trading_params.json`
 - **Per-sector AI models**: Each sector gets its own RBM + CNN to avoid cross-sector noise
 - **Bracket orders**: Every trade is a parent + stop loss + take profit, submitted atomically
 

@@ -5,7 +5,6 @@ Root module for running all tests. This can be expanded to include more test cla
 from ib_insync import *
 import os
 import json
-import subprocess
 from tests.test_retest_200ma import TestRetest200MA
 from tests.test_ai_analysis import TestAIanalysis
 from core.connection import ConnectionManager
@@ -36,20 +35,7 @@ class RunTests:
 
     def load_config(self):
         """Load configuration from JSON file"""
-        try:
-            # 1. Ask Git for the current branch name
-            # 'git rev-parse --abbrev-ref HEAD' is the standard way to get the branch name
-            branch_byte = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])
-            branch = branch_byte.decode('utf-8').strip()
-        except Exception as e:
-            # Fallback if Git isn't installed or this isn't a repo
-            branch = 'bot/nonproduction'
-
-        # 2. Set environment based on branch
-        # If we are on 'main' or 'master', use prod. Otherwise, use dev.
-        env = 'prod' if branch in ['bot/production', 'origin/bot/production'] else 'dev'
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/{env}.json')
-        
+        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/config.json')
         with open(file_path, 'r') as file:
             config = json.load(file)
 
