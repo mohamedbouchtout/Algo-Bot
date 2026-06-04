@@ -1,5 +1,9 @@
 # Algo-Bot
 
+[![CI](https://github.com/mohamedbouchtout/Algo-Bot/actions/workflows/ci.yml/badge.svg)](https://github.com/mohamedbouchtout/Algo-Bot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+
 An automated trading bot that scans S&P 500 and NASDAQ stocks for breakout and retest patterns using a 200-day moving average strategy, with an optional AI analysis pipeline (RBM + CNN) for signal confirmation.
 
 Built for Interactive Brokers (IBKR) with bracket orders, risk management, email alerts, and auto-updates.
@@ -33,7 +37,7 @@ Requires Python 3.10+ and TWS or IB Gateway running with API enabled. See [Insta
 ```
 Algo-Bot/
 ├── main.py                  # Entry point
-├── config/                  # Environment + strategy configs
+├── config/                  # Connection + strategy configs (single config.json)
 ├── core/                    # Bot orchestrator, IB connection, scheduler
 ├── data_fetch/              # Stock list + historical data (via yfinance)
 ├── execution/               # Order placement, position tracking, risk management
