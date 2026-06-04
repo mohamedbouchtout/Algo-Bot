@@ -40,6 +40,8 @@
 python tests_main.py
 ```
 
+Requires TWS or IB Gateway running (tests connect to IB for order/position integration).
+
 Test files are in `tests/`:
 - `test_retest_200ma.py` — Strategy pattern detection
 - `test_ai_analysis.py` — AI pipeline data flow

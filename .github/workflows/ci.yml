@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          # Stop on syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Warnings as informational (non-blocking)
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=150 --statistics
+
+      - name: Check all modules import cleanly
+        run: |
+          python -c "
+          import importlib, pathlib, sys
+          failed = []
+          for f in sorted(pathlib.Path('.').rglob('*.py')):
+              if f.name.startswith('test_') or str(f).startswith('.'):
+                  continue
+              module = str(f.with_suffix('')).replace('/', '.')
+              try:
+                  importlib.import_module(module)
+              except Exception as e:
+                  failed.append((module, e))
+          if failed:
+              for m, e in failed:
+                  print(f'FAIL: {m} -> {e}')
+              sys.exit(1)
+          print(f'All non-test modules imported successfully')
+          "
