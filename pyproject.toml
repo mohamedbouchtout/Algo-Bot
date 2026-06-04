@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 150
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort (import ordering)
+    "UP",   # pyupgrade (modern Python syntax)
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E741",   # ambiguous variable name (used in RBM math code)
+    "F401",   # unused imports (too noisy during development)
+    "E402",   # module-level import not at top of file
+    "F405",   # may be undefined from star import
+    "F403",   # star imports
+    "W291",   # trailing whitespace (inside string literals / HTML templates)
+    "W293",   # blank line contains whitespace (inside string literals / HTML templates)
+    "UP031",  # percent format (legacy RBM code)
+    "UP035",  # deprecated typing imports (Dict, List, etc.)
+]
+
+[tool.ruff.format]
+quote-style = "single"

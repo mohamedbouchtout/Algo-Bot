@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class ConvolutionNeuralNetwork(nn.Module):
     def __init__(self, input_length: int, num_classes: int = 3, rbm_features: int = 8):
         """
@@ -27,10 +28,7 @@ class ConvolutionNeuralNetwork(nn.Module):
         # Compute the flattened size produced by the two (k=5, pool=2) stages
         flat_size = self._compute_flat_size(input_length)
         if flat_size <= 0:
-            raise ValueError(
-                f"input_length={input_length} is too small for two "
-                f"(kernel=5, pool=2) conv/pool stages."
-            )
+            raise ValueError(f'input_length={input_length} is too small for two (kernel=5, pool=2) conv/pool stages.')
         self._flat_size = flat_size
 
         self.fc1 = nn.Linear(flat_size + rbm_features, 64)
@@ -40,15 +38,15 @@ class ConvolutionNeuralNetwork(nn.Module):
     def _compute_flat_size(input_length: int) -> int:
         """Length after two conv(k=5) + max_pool(k=2) stages, times 16 channels."""
         L = input_length
-        L = (L - 4) // 2   # conv1 (k=5, no padding) -> L-4, then max_pool1d(2)
-        L = (L - 4) // 2   # conv2 (k=5, no padding) -> L-4, then max_pool1d(2)
+        L = (L - 4) // 2  # conv1 (k=5, no padding) -> L-4, then max_pool1d(2)
+        L = (L - 4) // 2  # conv2 (k=5, no padding) -> L-4, then max_pool1d(2)
         return 16 * max(L, 0)
 
     def forward(self, img, rbm_feats):
         x = F.max_pool1d(F.relu(self.conv1(img)), 2)
         x = F.max_pool1d(F.relu(self.conv2(x)), 2)
         x = self.dropout(x)
-        x = x.view(x.size(0), -1)                 # (batch, flat_size)
-        x = torch.cat([x, rbm_feats], dim=1)      # (batch, flat_size + rbm_features)
+        x = x.view(x.size(0), -1)  # (batch, flat_size)
+        x = torch.cat([x, rbm_feats], dim=1)  # (batch, flat_size + rbm_features)
         x = F.relu(self.fc1(x))
         return self.fc2(x)

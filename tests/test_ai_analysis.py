@@ -4,15 +4,17 @@ Tests the RBM + CNN module analysis feature
 
 import logging
 import pprint
-from strategy.ai_analysis.ai_analyzer import AIAnalyzer
+
 from core.connection import ConnectionManager
-from utils.alerts import AlertManager
-from execution.position_manager import PositionManager
 from data_fetch.historical_data import StockDataFetcher
 from data_fetch.stock_fetcher import StockTickerFetcher
+from execution.position_manager import PositionManager
+from strategy.ai_analysis.ai_analyzer import AIAnalyzer
+from utils.alerts import AlertManager
 
 # Setup logging
 logger = logging.getLogger()
+
 
 class TestAIanalysis:
     def __init__(self, ib, config, params, stock_data_fetcher, stock_fetcher, connection_manager):
@@ -27,7 +29,7 @@ class TestAIanalysis:
     def train_modules(self):
         """Run a full pooled retrain of the RBM + CNN on the current ticker universe."""
         try:
-            logger.info("Starting AI retrain...")
+            logger.info('Starting AI retrain...')
             self.ai_analyzer.reset_dataset()
             added = 0
             for ticker in self.stock_fetcher.stock_list:
@@ -36,24 +38,24 @@ class TestAIanalysis:
                 self.ib.sleep(1)
 
             if added < 2:
-                logger.warning(f"Only {added} tickers accumulated, skipping training")
+                logger.warning(f'Only {added} tickers accumulated, skipping training')
                 return
 
             self.ai_analyzer.finalize_training(val_split=0.2)
-            logger.info(f"AI retrain finished: {added} tickers")
+            logger.info(f'AI retrain finished: {added} tickers')
         except Exception as e:
-            logger.error(f"AI training failed: {e}")
+            logger.error(f'AI training failed: {e}')
 
     def predictions(self):
         """Prints the predictions for each stock from the training"""
         try:
-            logger.info("Starting AI predictions...")
+            logger.info('Starting AI predictions...')
             for ticker in self.stock_fetcher.stock_list:
                 result = self.ai_analyzer.predict(ticker)
 
                 if result is not None:
                     logger.info(pprint.pformat(result, indent=4))
 
-            logger.info(f"AI predictions finished")
+            logger.info('AI predictions finished')
         except Exception as e:
-            logger.error(f"AI prediction failed: {e}")
+            logger.error(f'AI prediction failed: {e}')

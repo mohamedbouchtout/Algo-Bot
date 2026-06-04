@@ -7,9 +7,10 @@ across names.
 """
 
 import logging
+from typing import List
+
 import numpy as np
 import pandas as pd
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -17,18 +18,18 @@ logger = logging.getLogger(__name__)
 class VolumeFeatureExtractor:
     """Extract scale-free volume features from a bar DataFrame."""
 
-    FEATURE_NAMES: List[str] = [
-        'volume_ratio_20',   # volume / 20d avg volume
-        'volume_ratio_50',   # volume / 50d avg volume
-        'volume_log_change', # log(volume / volume.shift(1))
-        'obv_slope_20',      # slope of OBV over 20 days, normalised by 20d avg volume
+    FEATURE_NAMES: list[str] = [
+        'volume_ratio_20',  # volume / 20d avg volume
+        'volume_ratio_50',  # volume / 50d avg volume
+        'volume_log_change',  # log(volume / volume.shift(1))
+        'obv_slope_20',  # slope of OBV over 20 days, normalised by 20d avg volume
     ]
 
     def extract(self, df: pd.DataFrame) -> pd.DataFrame:
         required = {'close', 'volume'}
         missing = required - set(df.columns)
         if missing:
-            raise ValueError(f"VolumeFeatureExtractor missing columns: {missing}")
+            raise ValueError(f'VolumeFeatureExtractor missing columns: {missing}')
 
         close = df['close'].astype(float)
         volume = df['volume'].astype(float).replace(0, np.nan)

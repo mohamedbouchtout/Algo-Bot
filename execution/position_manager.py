@@ -3,14 +3,17 @@ Track and manage positions, sync with IB
 """
 
 import json
-import os
 import logging
-from ib_insync import *
+import os
 from typing import Dict
+
+from ib_insync import *
+
 from utils.alerts import AlertManager
 
 # Setup logging
 logger = logging.getLogger()
+
 
 class PositionManager:
     def __init__(self, ib, alert_manager: AlertManager, config, params):
@@ -52,10 +55,7 @@ class PositionManager:
                     exit_price = None
                 pnl_pct = (pnl / (entry_price * shares) * 100) if entry_price and shares else 0.0
 
-                logger.info(
-                    f"Position closed: {symbol} ({position_info['signal']['type']}) - "
-                    f"PnL: ${pnl:.2f} ({pnl_pct:.2f}%)"
-                )
+                logger.info(f'Position closed: {symbol} ({position_info["signal"]["type"]}) - PnL: ${pnl:.2f} ({pnl_pct:.2f}%)')
 
                 del self.active_positions[symbol]
                 self.remove_position(symbol)
@@ -68,49 +68,49 @@ class PositionManager:
                     exit_price=exit_price,
                     shares=shares,
                 )
-        
+
         # Log summary
         if closed_positions:
-            logger.info(f"Removed {len(closed_positions)} closed positions: {closed_positions}")
+            logger.info(f'Removed {len(closed_positions)} closed positions: {closed_positions}')
 
         # Log currently active positions
         if self.active_positions:
-            logger.info(f"Active positions: {len(self.active_positions)} stocks")
+            logger.info(f'Active positions: {len(self.active_positions)} stocks')
 
             for symbol, info in self.active_positions.items():
                 ib_pos = portfolio_by_symbol.get(symbol)
                 if ib_pos:
                     logger.info(
-                        f"  {symbol}: {info['signal']['type']}, "
-                        f"Qty: {ib_pos.position}, "
-                        f"Avg Cost: ${ib_pos.averageCost:.2f}, "
-                        f"Current: ${ib_pos.marketPrice:.2f}, "
-                        f"P&L: ${ib_pos.unrealizedPNL:.2f}"
+                        f'  {symbol}: {info["signal"]["type"]}, '
+                        f'Qty: {ib_pos.position}, '
+                        f'Avg Cost: ${ib_pos.averageCost:.2f}, '
+                        f'Current: ${ib_pos.marketPrice:.2f}, '
+                        f'P&L: ${ib_pos.unrealizedPNL:.2f}'
                     )
         else:
-            logger.info("No active positions")
+            logger.info('No active positions')
 
-    def load_positions(self) -> Dict:
+    def load_positions(self) -> dict:
         """Load positions from JSON and sync with IB"""
-        out: Dict = {}
+        out: dict = {}
         try:
             if not os.path.exists(self.file_path):
-                logger.info("No positions.json file found - starting fresh")
+                logger.info('No positions.json file found - starting fresh')
                 return out
-            
-            with open(self.file_path, 'r') as file:
+
+            with open(self.file_path) as file:
                 data = json.load(file)
-            
+
             if not data:
-                logger.info("positions.json is empty - starting fresh")
+                logger.info('positions.json is empty - starting fresh')
                 return out
-            
+
             # Get actual IB positions to verify
             self.ib.reqPositions()
             ib_positions = self.ib.run(self.ib.reqPositionsAsync())
             self.ib.sleep(3)
             ib_symbols = {pos.contract.symbol for pos in ib_positions if pos.position != 0}
-            
+
             # Load positions from JSON
             loaded_count = 0
             symbols_to_remove = []
@@ -138,7 +138,7 @@ class PositionManager:
                             'bounce_strength': position_data.get('bounce_strength', 0),
                             'breakdown_strength': position_data.get('breakdown_strength', 0),
                             'ma_slope': position_data.get('ma_slope', 0),
-                            'ma_slope_pct': position_data.get('ma_slope_pct', 0)
+                            'ma_slope_pct': position_data.get('ma_slope_pct', 0),
                         }
                     elif position_data['strategy_type'] == 'ai_analysis':
                         signal = {
@@ -150,22 +150,18 @@ class PositionManager:
                             'target': position_data['target'],
                             'risk': position_data['risk'],
                             'reward': position_data['reward'],
-                            'confidence': position_data.get('confidence', 0)
+                            'confidence': position_data.get('confidence', 0),
                         }
 
-                    out[symbol] = {
-                        'signal': signal,
-                        'shares': position_data['shares'],
-                        'entry_time': position_data['entry_time']
-                    }
-                    
+                    out[symbol] = {'signal': signal, 'shares': position_data['shares'], 'entry_time': position_data['entry_time']}
+
                     loaded_count += 1
-                    logger.info(f"Loaded position from JSON: {symbol} ({position_data['type']})")
+                    logger.info(f'Loaded position from JSON: {symbol} ({position_data["type"]})')
                 else:
-                    logger.warning(f"Position {symbol} in JSON but not in IB - removing from JSON")
+                    logger.warning(f'Position {symbol} in JSON but not in IB - removing from JSON')
                     symbols_to_remove.append(symbol)
-            
-            logger.info(f"Loaded {loaded_count} positions from positions.json")
+
+            logger.info(f'Loaded {loaded_count} positions from positions.json')
 
             # Now safe to remove
             if symbols_to_remove:
@@ -173,17 +169,17 @@ class PositionManager:
                     del data[symbol]
                 with open(self.file_path, 'w') as file:
                     json.dump(data, file, indent=4)
-            
+
         except Exception as e:
-            logger.error(f"Failed to load positions from JSON: {e}")
+            logger.error(f'Failed to load positions from JSON: {e}')
         return out
-    
-    def add_position(self, symbol: str, signal: Dict, shares: int, entry_time: str):
+
+    def add_position(self, symbol: str, signal: dict, shares: int, entry_time: str):
         """Add new position to tracking"""
         try:
             # Load existing data
             if os.path.exists(self.file_path):
-                with open(self.file_path, 'r') as file:
+                with open(self.file_path) as file:
                     data = json.load(file)
             else:
                 data = {}
@@ -200,9 +196,15 @@ class PositionManager:
                     'target': signal['target'],
                     'risk': signal['risk'],
                     'reward': signal['risk'] * self.params['strategy_retest_200ma']['risk_reward_ratio'],
-                    'breakout_date': signal['breakout_date'].strftime('%Y-%m-%d') if hasattr(signal['breakout_date'], 'strftime') else str(signal['breakout_date']),
-                    'retest_date': signal['retest_date'].strftime('%Y-%m-%d') if hasattr(signal['retest_date'], 'strftime') else str(signal['retest_date']),
-                    'current_date': signal['current_date'].strftime('%Y-%m-%d') if hasattr(signal['current_date'], 'strftime') else str(signal['current_date']),
+                    'breakout_date': signal['breakout_date'].strftime('%Y-%m-%d')
+                    if hasattr(signal['breakout_date'], 'strftime')
+                    else str(signal['breakout_date']),
+                    'retest_date': signal['retest_date'].strftime('%Y-%m-%d')
+                    if hasattr(signal['retest_date'], 'strftime')
+                    else str(signal['retest_date']),
+                    'current_date': signal['current_date'].strftime('%Y-%m-%d')
+                    if hasattr(signal['current_date'], 'strftime')
+                    else str(signal['current_date']),
                     'breakout_volume_ratio': signal.get('breakout_volume_ratio', 0),
                     'retest_volume_ratio': signal.get('retest_volume_ratio', 0),
                     'avg_volume': signal.get('avg_volume', 0),
@@ -211,7 +213,7 @@ class PositionManager:
                     'ma_slope': signal.get('ma_slope', 0),
                     'ma_slope_pct': signal.get('ma_slope_pct', 0),
                     'shares': shares,
-                    'entry_time': entry_time
+                    'entry_time': entry_time,
                 }
             elif signal['strategy_type'] == 'ai_analysis':
                 new_entry = {
@@ -225,44 +227,43 @@ class PositionManager:
                     'reward': signal['reward'],
                     'confidence': signal['confidence'],
                     'shares': shares,
-                    'entry_time': entry_time
+                    'entry_time': entry_time,
                 }
-            
+
             # Add to data
             data[symbol] = new_entry
-            
+
             # Write back to file
             with open(self.file_path, 'w') as file:
                 json.dump(data, file, indent=4)
-            
-            logger.debug(f"Saved position {symbol} to positions.json")
-            
-        except Exception as e:
-            logger.error(f"Failed to save position to JSON: {e}")
 
-    
+            logger.debug(f'Saved position {symbol} to positions.json')
+
+        except Exception as e:
+            logger.error(f'Failed to save position to JSON: {e}')
+
     def remove_position(self, symbol: str):
         """Remove closed position"""
         try:
             if not os.path.exists(self.file_path):
                 return
-            
-            with open(self.file_path, 'r') as file:
+
+            with open(self.file_path) as file:
                 data = json.load(file)
-            
+
             if symbol in data:
                 del data[symbol]
-                
+
                 with open(self.file_path, 'w') as file:
                     json.dump(data, file, indent=4)
-                
-                logger.debug(f"Removed position {symbol} from positions.json")
+
+                logger.debug(f'Removed position {symbol} from positions.json')
             else:
-                logger.warning(f"{symbol} not found in positions.json for removal")
-            
+                logger.warning(f'{symbol} not found in positions.json for removal')
+
         except Exception as e:
-            logger.error(f"Failed to remove position from JSON: {e}")
-    
+            logger.error(f'Failed to remove position from JSON: {e}')
+
     def get_position_count(self) -> int:
         """Get number of active positions"""
         return len(self.active_positions)

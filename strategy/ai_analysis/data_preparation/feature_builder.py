@@ -18,13 +18,15 @@ CNN can consume it directly as a 1-D signal.
 """
 
 import logging
+from collections.abc import Iterable
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Iterable, List, Optional, Tuple
 
+from strategy.ai_analysis.data_preparation.indicator_features import IndicatorFeatureExtractor
 from strategy.ai_analysis.data_preparation.price_features import PriceFeatureExtractor
 from strategy.ai_analysis.data_preparation.volume_features import VolumeFeatureExtractor
-from strategy.ai_analysis.data_preparation.indicator_features import IndicatorFeatureExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class FeatureBuilder:
         self,
         window_size: int = 10,
         n_bits: int = 4,
-        extractors: Optional[List] = None,
+        extractors: list | None = None,
         forward_horizon: int = 5,
         label_threshold: float = 0.01,
     ):
@@ -61,8 +63,8 @@ class FeatureBuilder:
         self.label_threshold = label_threshold
 
         # Populated by fit_bin_edges()
-        self.feature_names: List[str] = []
-        self.bin_edges: Dict[str, np.ndarray] = {}
+        self.feature_names: list[str] = []
+        self.bin_edges: dict[str, np.ndarray] = {}
 
     # ------------------------------------------------------------------ public
     def build_continuous_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -80,20 +82,14 @@ class FeatureBuilder:
         pooled = pooled.replace([np.inf, -np.inf], np.nan).dropna(how='any')
 
         if pooled.empty:
-            raise ValueError("No clean rows to fit bin edges, check input data")
+            raise ValueError('No clean rows to fit bin edges, check input data')
 
         self.feature_names = list(pooled.columns)
         # n_bits thresholds -> splits the distribution into n_bits+1 buckets.
         # Thermometer encoding of bucket k turns on the first k bits.
         quantiles = np.linspace(0.0, 1.0, self.n_bits + 2)[1:-1]
-        self.bin_edges = {
-            col: np.quantile(pooled[col].values, quantiles)
-            for col in self.feature_names
-        }
-        logger.info(
-            f"FeatureBuilder fit: {len(self.feature_names)} features, "
-            f"{self.n_bits} bits/feature, pooled rows={len(pooled)}"
-        )
+        self.bin_edges = {col: np.quantile(pooled[col].values, quantiles) for col in self.feature_names}
+        logger.info(f'FeatureBuilder fit: {len(self.feature_names)} features, {self.n_bits} bits/feature, pooled rows={len(pooled)}')
 
     def binarize(self, features: pd.DataFrame) -> np.ndarray:
         """
@@ -102,12 +98,12 @@ class FeatureBuilder:
         Returns a (rows, n_features * n_bits) uint8 array.
         """
         if not self.bin_edges:
-            raise RuntimeError("fit_bin_edges() must be called before binarize()")
+            raise RuntimeError('fit_bin_edges() must be called before binarize()')
 
         arrs = []
         for col in self.feature_names:
-            edges = self.bin_edges[col]               # shape (n_bits,)
-            vals = features[col].values[:, None]      # shape (rows, 1)
+            edges = self.bin_edges[col]  # shape (n_bits,)
+            vals = features[col].values[:, None]  # shape (rows, 1)
             # bit k on when value > edge[k]  -> thermometer encoding
             arrs.append((vals > edges[None, :]).astype(np.uint8))
         return np.concatenate(arrs, axis=1)
@@ -116,7 +112,7 @@ class FeatureBuilder:
         self,
         df: pd.DataFrame,
         include_labels: bool = True,
-    ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
         """
         Build sliding window samples for one ticker.
 
@@ -145,25 +141,25 @@ class FeatureBuilder:
             )
 
         # Binarise once for the whole ticker, then slide
-        bits = self.binarize(features)                        # (T, F*B)
+        bits = self.binarize(features)  # (T, F*B)
         cont = features[self.feature_names].values.astype(np.float32)  # (T, F)
 
         T = len(features)
         last_start = T - self.window_size - (self.forward_horizon if include_labels else 0)
         starts = np.arange(0, last_start)
 
-        rbm_x = np.stack([bits[s:s + self.window_size].reshape(-1) for s in starts])
-        cnn_x = np.stack([cont[s:s + self.window_size].reshape(-1) for s in starts])
+        rbm_x = np.stack([bits[s : s + self.window_size].reshape(-1) for s in starts])
+        cnn_x = np.stack([cont[s : s + self.window_size].reshape(-1) for s in starts])
 
         labels = None
         if include_labels and close is not None:
-            end_idx = starts + self.window_size - 1        # index of the last bar in the window
-            fwd_idx = end_idx + self.forward_horizon       # index `forward_horizon` bars later
+            end_idx = starts + self.window_size - 1  # index of the last bar in the window
+            fwd_idx = end_idx + self.forward_horizon  # index `forward_horizon` bars later
             fwd_return = (close[fwd_idx] / close[end_idx]) - 1.0
 
-            labels = np.full(len(starts), 1, dtype=np.int64)   # default = flat
-            labels[fwd_return > self.label_threshold] = 2      # long
-            labels[fwd_return < -self.label_threshold] = 0     # short
+            labels = np.full(len(starts), 1, dtype=np.int64)  # default = flat
+            labels[fwd_return > self.label_threshold] = 2  # long
+            labels[fwd_return < -self.label_threshold] = 0  # short
 
         return rbm_x.astype(np.uint8), cnn_x, labels
 

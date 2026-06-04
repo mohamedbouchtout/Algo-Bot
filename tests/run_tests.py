@@ -2,17 +2,20 @@
 Root module for running all tests. This can be expanded to include more test classes as needed.
 """
 
-from ib_insync import *
-import os
 import json
-from tests.test_retest_200ma import TestRetest200MA
-from tests.test_ai_analysis import TestAIanalysis
+import os
+
+from ib_insync import *
+
 from core.connection import ConnectionManager
-from utils.alerts import AlertManager
-from execution.position_manager import PositionManager
 from data_fetch.historical_data import StockDataFetcher
 from data_fetch.stock_fetcher import StockTickerFetcher
+from execution.position_manager import PositionManager
+from tests.test_ai_analysis import TestAIanalysis
+from tests.test_retest_200ma import TestRetest200MA
+from utils.alerts import AlertManager
 from utils.logger import setup_logger
+
 
 class RunTests:
     def __init__(self):
@@ -28,15 +31,15 @@ class RunTests:
 
     def load_params(self):
         """Load parameters from JSON file"""
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'config/trading_params.json')
-        with open(file_path, 'r') as file:
+        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/trading_params.json')
+        with open(file_path) as file:
             params = json.load(file)
         return params
 
     def load_config(self):
         """Load configuration from JSON file"""
         file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/config.json')
-        with open(file_path, 'r') as file:
+        with open(file_path) as file:
             config = json.load(file)
 
         # If running in a container, override host to use Docker DNS
@@ -48,7 +51,7 @@ class RunTests:
                 running_in_container = False
         if not running_in_container:
             try:
-                with open('/proc/1/cgroup', 'r') as cgroup_file:
+                with open('/proc/1/cgroup') as cgroup_file:
                     running_in_container = 'docker' in cgroup_file.read() or 'kubepods' in cgroup_file.read()
             except Exception:
                 running_in_container = running_in_container
@@ -61,7 +64,7 @@ class RunTests:
     def run(self):
         """Runs all the test classes"""
         if not self.connection_manager.connect():
-            self.logger.error("Failed to connect. Exiting.")
+            self.logger.error('Failed to connect. Exiting.')
             return
 
         try:
@@ -74,10 +77,10 @@ class RunTests:
             test_bot = TestRetest200MA(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
             test_bot.test_retest_200ma()
         except KeyboardInterrupt:
-            self.logger.info("Bot stopped by user")
+            self.logger.info('Bot stopped by user')
             self.alert_manager.alert_bot_stopped()
         except Exception as e:
-            self.logger.error(f"Bot error: {e}")
-            self.alert_manager.alert_error(str(e), "Unexpected bot error thrown.")
+            self.logger.error(f'Bot error: {e}')
+            self.alert_manager.alert_error(str(e), 'Unexpected bot error thrown.')
         finally:
             self.connection_manager.disconnect()

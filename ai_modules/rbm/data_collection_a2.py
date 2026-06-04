@@ -1,43 +1,43 @@
-import numpy as np
-import numpy.random as rng
-import tensorflow as tf
-import pandas as pd
-from sklearn.preprocessing import Binarizer
+import datetime
+
 import h5py as h5
 import matplotlib.pyplot as plt
+import numpy as np
+import numpy.random as rng
+import pandas as pd
+import tensorflow as tf
+from datasets.bas_data import get_data
 from my_RBM_tf2_test import RBM
 from optimizer import Optimizer
-from datasets.bas_data import get_data
-import pandas as pd
-import datetime
-from utils import plot_image_grid, plot_single_image, plot_input_sample
+from sklearn.preprocessing import Binarizer
 
-#This needs to be done after running data_collection_a1.py, 
+from utils import plot_image_grid, plot_input_sample, plot_single_image
+
+# This needs to be done after running data_collection_a1.py,
 # not really sure how to automate this efficiently without altering the source heavily
 
 
 ########################################################################
 #                                   BAS                                #
 ########################################################################
-x_test_bas = get_data(rng,s=2)
-x_train_bas = get_data(rng,s=2)
+x_test_bas = get_data(rng, s=2)
+x_train_bas = get_data(rng, s=2)
 
 
-machine = RBM(4, 6,1000,(2,2), 6)
-machine.from_saved_model('D:\Desktop\Spring 2024\ML\RBM_NEEDS_TO_WORK\\results\models0609/0609-024458model.h5')
-image_shape = (2,2)
+machine = RBM(4, 6, 1000, (2, 2), 6)
+machine.from_saved_model('D:\\Desktop\\Spring 2024\\ML\\RBM_NEEDS_TO_WORK\\results\\models0609/0609-024458model.h5')
+image_shape = (2, 2)
 weights = np.asarray(machine.weights)
 vis_bias = np.asarray(machine.visible_biases)
 hid_bias = np.asarray(machine.hidden_biases)
-#print(weights)
-#plot_image_grid(weights, image_shape, 6)
+# print(weights)
+# plot_image_grid(weights, image_shape, 6)
 
-visible_states_1,visible_probabilities_1,inpt = machine.parallel_sample(inpt = x_test_bas,n_step_MC=10)
-#print out the result
-#plot_image_grid(x_test_bas, image_shape, 6,name='TestGrid'+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+'.pdf')
-plot_image_grid(visible_probabilities_1, image_shape, 6,name='BAS2x2Temp300A'+'.pdf')
+visible_states_1, visible_probabilities_1, inpt = machine.parallel_sample(inpt=x_test_bas, n_step_MC=10)
+# print out the result
+# plot_image_grid(x_test_bas, image_shape, 6,name='TestGrid'+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+'.pdf')
+plot_image_grid(visible_probabilities_1, image_shape, 6, name='BAS2x2Temp300A' + '.pdf')
 #
-
 
 
 # machine.from_saved_model('D:\Desktop\Spring 2024\ML\RBM_NEEDS_TO_WORK\\results\models2208/2208-140223model.h5')

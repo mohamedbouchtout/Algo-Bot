@@ -36,15 +36,15 @@ class CNNTrainer:
         epochs: int = 20,
         batch_size: int = 64,
         learning_rate: float = 1e-3,
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         # Minimum length for two (k=5, pool=2) stages to leave >0 timesteps.
         # conv1 reduces by 4, pool halves; same for conv2.
         if ConvolutionNeuralNetwork._compute_flat_size(input_length) <= 0:
             raise ValueError(
-                f"CNN input_length={input_length} is too small for two "
-                f"(kernel=5, pool=2) conv/pool stages. Increase window_size or "
-                f"include more features."
+                f'CNN input_length={input_length} is too small for two '
+                f'(kernel=5, pool=2) conv/pool stages. Increase window_size or '
+                f'include more features.'
             )
         self.input_length = input_length
         self.rbm_feature_dim = rbm_feature_dim
@@ -54,7 +54,7 @@ class CNNTrainer:
         self.learning_rate = learning_rate
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.model: Optional[ConvolutionNeuralNetwork] = None
+        self.model: ConvolutionNeuralNetwork | None = None
 
     # ---------------------------------------------------------------- train
     def train(
@@ -65,13 +65,9 @@ class CNNTrainer:
         val_split: float = 0.2,
     ) -> None:
         if cnn_x.shape[1] != self.input_length:
-            raise ValueError(
-                f"cnn_x second dim must be {self.input_length}; got {cnn_x.shape[1]}"
-            )
+            raise ValueError(f'cnn_x second dim must be {self.input_length}; got {cnn_x.shape[1]}')
         if rbm_feats.shape[1] != self.rbm_feature_dim:
-            raise ValueError(
-                f"rbm_feats second dim must be {self.rbm_feature_dim}; got {rbm_feats.shape[1]}"
-            )
+            raise ValueError(f'rbm_feats second dim must be {self.rbm_feature_dim}; got {rbm_feats.shape[1]}')
 
         self.model = ConvolutionNeuralNetwork(
             input_length=self.input_length,
@@ -110,10 +106,7 @@ class CNNTrainer:
 
             train_loss = running_loss / max(len(train_ds), 1)
             val_acc = self._evaluate(val_loader) if len(val_ds) else float('nan')
-            logger.info(
-                f"CNN epoch {epoch}/{self.epochs} "
-                f"train_loss={train_loss:.4f} val_acc={val_acc:.3f}"
-            )
+            logger.info(f'CNN epoch {epoch}/{self.epochs} train_loss={train_loss:.4f} val_acc={val_acc:.3f}')
 
     def _evaluate(self, loader: DataLoader) -> float:
         assert self.model is not None
@@ -132,7 +125,7 @@ class CNNTrainer:
         return correct / max(total, 1)
 
     # ------------------------------------------------------------- inference
-    def predict(self, cnn_x: np.ndarray, rbm_feats: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(self, cnn_x: np.ndarray, rbm_feats: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns
         -------
@@ -140,7 +133,7 @@ class CNNTrainer:
         probs : (N, num_classes) softmax probabilities
         """
         if self.model is None:
-            raise RuntimeError("CNN has not been trained yet")
+            raise RuntimeError('CNN has not been trained yet')
         self.model.eval()
         with torch.no_grad():
             img = torch.tensor(cnn_x, dtype=torch.float32).unsqueeze(1).to(self.device)

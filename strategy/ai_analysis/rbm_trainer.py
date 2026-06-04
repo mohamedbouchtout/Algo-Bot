@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 # is on sys.path so those legacy imports keep working if someone flips small_Big.
 _RBM_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    'ai_modules', 'rbm',
+    'ai_modules',
+    'rbm',
 )
 if _RBM_DIR not in sys.path:
     sys.path.insert(0, _RBM_DIR)
@@ -60,14 +61,12 @@ class RBMTrainer:
         self.learning_rate = learning_rate
         self.k = k
         self.name = name
-        self.rbm: Optional[RBM] = None
+        self.rbm: RBM | None = None
 
     # -------------------------------------------------------------- training
     def train(self, x_train: np.ndarray, x_test: np.ndarray) -> None:
         if x_train.ndim != 2 or x_train.shape[1] != self.visible_dim:
-            raise ValueError(
-                f"x_train must be (N, {self.visible_dim}); got {x_train.shape}"
-            )
+            raise ValueError(f'x_train must be (N, {self.visible_dim}); got {x_train.shape}')
 
         # RBM does integer sqrt of picture_shape in a few debug plots; give it
         # a sensible square-ish shape even if the vector length isn't a perfect
@@ -97,8 +96,8 @@ class RBMTrainer:
         }
         optimizer = _SimpleOptimizer(self.rbm, lr=self.learning_rate)
         logger.info(
-            f"Training RBM: visible={self.visible_dim}, hidden={self.hidden_dim}, "
-            f"epochs={self.epochs}, batch={self.batch_size}, samples={len(x_train)}"
+            f'Training RBM: visible={self.visible_dim}, hidden={self.hidden_dim}, '
+            f'epochs={self.epochs}, batch={self.batch_size}, samples={len(x_train)}'
         )
         self.rbm.train(data, optimizer)
 
@@ -109,8 +108,9 @@ class RBMTrainer:
         features the CNN concatenates onto its own conv output.
         """
         if self.rbm is None:
-            raise RuntimeError("RBM has not been trained yet")
+            raise RuntimeError('RBM has not been trained yet')
         import tensorflow as tf
+
         h_prob = tf.sigmoid(
             tf.tensordot(
                 x.astype(np.float64),
