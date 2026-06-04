@@ -1,102 +1,255 @@
-import numpy as np
-import numpy.random as rng
-import tensorflow as tf
-import pandas as pd
-from sklearn.preprocessing import Binarizer
 import h5py as h5
 import matplotlib.pyplot as plt
+import numpy as np
+import numpy.random as rng
+import pandas as pd
+import tensorflow as tf
+from datasets.bas_data import get_data
 from my_RBM_tf2_test import RBM
 from optimizer import Optimizer
-from datasets.bas_data import get_data
-import pandas as pd
-from utils import plot_image_grid, plot_single_image, plot_input_sample
+from sklearn.preprocessing import Binarizer
+
+from utils import plot_image_grid, plot_input_sample, plot_single_image
 
 ##############################################################################################
 #                                            BAS TRAINING                                    #
 ##############################################################################################
-x_test_bas = get_data(rng,s=2)
-x_train_bas = get_data(rng,s=2)
+x_test_bas = get_data(rng, s=2)
+x_train_bas = get_data(rng, s=2)
 
 np.random.shuffle(x_train_bas)
 np.random.shuffle(x_test_bas)
 
 
+data_bas = {'x_train': x_train_bas[: len(x_train_bas)], 'x_test': x_test_bas[: len(x_test_bas)]}
 
-data_bas = {"x_train": x_train_bas[:len(x_train_bas)],"x_test": x_test_bas[:len(x_test_bas)]}
-
-x_test_bas3 = get_data(rng,s=3)
-x_train_bas3 = get_data(rng,s=3)
+x_test_bas3 = get_data(rng, s=3)
+x_train_bas3 = get_data(rng, s=3)
 
 np.random.shuffle(x_train_bas3)
 np.random.shuffle(x_test_bas3)
 
-data_bas3 = {"x_train": x_train_bas3[:len(x_train_bas3)],"x_test": x_test_bas3[:len(x_test_bas3)]}
-#Create a restricted boltzmann machines
+data_bas3 = {'x_train': x_train_bas3[: len(x_train_bas3)], 'x_test': x_test_bas3[: len(x_test_bas3)]}
+# Create a restricted boltzmann machines
 
-#TEST1
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_110824_T1',l_1=0,non_parallel=True,initial_temperature=1,annealing_decay=0)
+# TEST1
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_110824_T1',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1,
+    annealing_decay=0,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # #TEST2
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_010824_T2',l_1=0,non_parallel=True,initial_temperature=1.3,annealing_decay=0)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_010824_T2',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1.3,
+    annealing_decay=0,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # #TEST3
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_010824_T3',l_1=0,non_parallel=True,initial_temperature=1.5,annealing_decay=0)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_010824_T3',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1.5,
+    annealing_decay=0,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # #TEST4
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_010824_T4',l_1=0,non_parallel=True,initial_temperature=1.75,annealing_decay=0)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_010824_T4',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1.75,
+    annealing_decay=0,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
-#TEST5
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_110824_T5',l_1=0,non_parallel=True,initial_temperature=2,annealing_decay=0)
+# TEST5
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_110824_T5',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=2,
+    annealing_decay=0,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # #TEST6
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_110824_T5',l_1=0,non_parallel=True,initial_temperature=3,annealing_decay=0)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_110824_T5',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=3,
+    annealing_decay=0,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # # #TEST2
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_010824_T2',l_1=0,non_parallel=True,initial_temperature=1.3,annealing_decay=0.00001311)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_010824_T2',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1.3,
+    annealing_decay=0.00001311,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # # #TEST3
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_010824_T3',l_1=0,non_parallel=True,initial_temperature=1.5,annealing_decay=0.00002027)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_010824_T3',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1.5,
+    annealing_decay=0.00002027,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
-#TEST4
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_010824_T4',l_1=0,non_parallel=True,initial_temperature=1.75,annealing_decay=0.00002798)
+# TEST4
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_010824_T4',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=1.75,
+    annealing_decay=0.00002798,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 
 # # #TEST5
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_110824_T5',l_1=0,non_parallel=True,initial_temperature=2,annealing_decay=0.00003465)
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_110824_T5',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=2,
+    annealing_decay=0.00003465,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
-#TEST6
-machine = RBM(np.size(x_test_bas[0]), len(x_test_bas),20000,(2,2), 1, k=100, n_test_samples=6 ,small_Big=True, NAME='BAS_2x2_110824_T6',l_1=0,non_parallel=True,initial_temperature=3,annealing_decay=0.00005493)
+# Train the machine
+machine.train(data_bas, optimus)
+# TEST6
+machine = RBM(
+    np.size(x_test_bas[0]),
+    len(x_test_bas),
+    20000,
+    (2, 2),
+    1,
+    k=100,
+    n_test_samples=6,
+    small_Big=True,
+    NAME='BAS_2x2_110824_T6',
+    l_1=0,
+    non_parallel=True,
+    initial_temperature=3,
+    annealing_decay=0.00005493,
+)
 optimus = Optimizer(machine, 0.15)
-#Train the machine
-machine.train(data_bas,optimus)
+# Train the machine
+machine.train(data_bas, optimus)
 # #3x3
 # #TEST1
 # machine = RBM(np.size(x_test_bas3[0]), len(x_test_bas3),5000,(3,3), 2, k=100 ,small_Big=True, NAME='BAS_3x3_110824_T1',l_1=0,non_parallel=False,initial_temperature=1,annealing_decay=0)

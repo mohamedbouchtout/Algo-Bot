@@ -2,15 +2,17 @@
 Gets stock tickers from all NASDAQ and S&P 500 stocks
 """
 
-import logging
-from ib_insync import *
-import os
-import requests
 import json
+import logging
+import os
+
+import requests
 import yfinance as yf
+from ib_insync import *
 
 # Setup logging
 logger = logging.getLogger()
+
 
 class StockTickerFetcher:
     def __init__(self):
@@ -22,114 +24,115 @@ class StockTickerFetcher:
     def get_sp500_tickers(self):
         """Fetch S&P 500 from GitHub dataset"""
         try:
-            url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-            logger.info("Fetching S&P 500 from GitHub...")
-            
+            url = 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv'
+            logger.info('Fetching S&P 500 from GitHub...')
+
             response = requests.get(url, timeout=10)
             response.raise_for_status()
-            
+
             # Parse CSV
             lines = response.text.strip().split('\n')
             tickers = [line.split(',')[0] for line in lines[1:]]  # Skip header
-            
-            logger.info(f"S&P 500: {len(tickers)} stocks")
+
+            logger.info(f'S&P 500: {len(tickers)} stocks')
             return tickers
-            
+
         except Exception as e:
-            logger.error(f"Failed to fetch S&P 500: {e}")
+            logger.error(f'Failed to fetch S&P 500: {e}')
             return []
 
     def get_nasdaq100_tickers(self):
         """Fetch NASDAQ-100 from GitHub dataset"""
         try:
-            url = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json"
-            logger.info("Fetching NASDAQ from GitHub...")
-            
+            url = 'https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json'
+            logger.info('Fetching NASDAQ from GitHub...')
+
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             data = json.loads(response.text)
-            
+
             # Extract symbols from dictionaries and filter
             filtered_tickers = []
-            
+
             for item in data:
                 symbol = item.get('symbol', '')
-                
+
                 # Filter criteria to get major stocks (approximate NASDAQ-100)
                 # 1. Symbol length <= 5 (exclude warrants, rights, units)
                 # 2. No dots, hyphens (exclude special share classes)
                 # 3. Has sector/industry (exclude SPACs and new listings)
                 # 4. Not a warrant/right (no 'W', 'R', 'U' suffix)
-                
-                if (len(symbol) <= 5 and 
-                    '.' not in symbol and 
-                    '-' not in symbol and
-                    not symbol.endswith('W') and  # Warrants
-                    not symbol.endswith('R') and  # Rights
-                    not symbol.endswith('U') and  # Units
-                    item.get('sector') and        # Has sector
-                    item.get('industry')):        # Has industry
-                    
+
+                if (
+                    len(symbol) <= 5
+                    and '.' not in symbol
+                    and '-' not in symbol
+                    and not symbol.endswith('W')  # Warrants
+                    and not symbol.endswith('R')  # Rights
+                    and not symbol.endswith('U')  # Units
+                    and item.get('sector')  # Has sector
+                    and item.get('industry')
+                ):  # Has industry
                     filtered_tickers.append(symbol)
-            
-            logger.info(f"Filtered NASDAQ: {len(filtered_tickers)} stocks")
-            
+
+            logger.info(f'Filtered NASDAQ: {len(filtered_tickers)} stocks')
+
             return filtered_tickers[:200]
-            
+
         except Exception as e:
-            logger.error(f"Failed to fetch NASDAQ: {e}")
+            logger.error(f'Failed to fetch NASDAQ: {e}')
             return []
 
     def get_stock_list(self, sp500=True, nasdaq=True):
         """Fetch S&P 500 and NASDAQ-100 tickers"""
-        
+
         SP500 = self.get_sp500_tickers() if sp500 else []
         NASDAQ = self.get_nasdaq100_tickers() if nasdaq else []
-        
+
         # Combine and deduplicate
         combined = sorted(list(set(SP500 + NASDAQ)))
-        logger.info(f"Total unique tickers: {len(combined)}")
+        logger.info(f'Total unique tickers: {len(combined)}')
 
         return combined
 
     def save_stock_list(self, sp500=True, nasdaq=True):
         """Save comprehensive stock list to file"""
-        
-        logger.info("Generating stock list...")
-        
+
+        logger.info('Generating stock list...')
+
         # Use comprehensive hardcoded list
         stocks = self.get_stock_list(sp500, nasdaq)
-        
-        logger.info(f"Using {len(stocks)} stocks from curated list")
-        
+
+        logger.info(f'Using {len(stocks)} stocks from curated list')
+
         # Save to file (ensure directory exists)
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
 
         with open(self.file_path, 'w') as f:
             for ticker in stocks:
-                f.write(f"{ticker}\n")
-        
-        logger.info(f"Saved {len(stocks)} tickers to {self.file_path}")
-        
+                f.write(f'{ticker}\n')
+
+        logger.info(f'Saved {len(stocks)} tickers to {self.file_path}')
+
         return stocks
 
     def categorize_stocks(self) -> dict:
         """Categorize stocks by sector and industry for better AI training"""
         categorized = {}
-        
+
         for ticker in self.stock_list:
             try:
                 info = yf.Ticker(ticker).info
                 sector = info.get('sector', 'Unknown')
                 industry = info.get('industry', 'Unknown')
-                
+
                 if sector not in categorized:
                     categorized[sector] = {}
                 if industry not in categorized[sector]:
                     categorized[sector][industry] = []
-                
+
                 categorized[sector][industry].append(ticker)
             except Exception as e:
-                logger.warning(f"Failed to categorize {ticker}: {e}")
-        
+                logger.warning(f'Failed to categorize {ticker}: {e}')
+
         return categorized

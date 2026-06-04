@@ -6,9 +6,10 @@ safely pooled across tickers and later binarised for the RBM.
 """
 
 import logging
+from typing import List
+
 import numpy as np
 import pandas as pd
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +17,19 @@ logger = logging.getLogger(__name__)
 class IndicatorFeatureExtractor:
     """Classic technical indicators, all scale-free."""
 
-    FEATURE_NAMES: List[str] = [
-        'rsi14',             # 0..100
-        'macd_hist_norm',    # MACD histogram / close  (scale free)
-        'bb_position',       # position within Bollinger Bands, 0..1
-        'atr14_pct',         # ATR(14) / close
-        'ma200_slope_pct',   # 20-day slope of 200MA divided by close
+    FEATURE_NAMES: list[str] = [
+        'rsi14',  # 0..100
+        'macd_hist_norm',  # MACD histogram / close  (scale free)
+        'bb_position',  # position within Bollinger Bands, 0..1
+        'atr14_pct',  # ATR(14) / close
+        'ma200_slope_pct',  # 20-day slope of 200MA divided by close
     ]
 
     def extract(self, df: pd.DataFrame) -> pd.DataFrame:
         required = {'close', 'high', 'low'}
         missing = required - set(df.columns)
         if missing:
-            raise ValueError(f"IndicatorFeatureExtractor missing columns: {missing}")
+            raise ValueError(f'IndicatorFeatureExtractor missing columns: {missing}')
 
         close = df['close'].astype(float)
         high = df['high'].astype(float)
@@ -63,11 +64,14 @@ class IndicatorFeatureExtractor:
 
         # --- ATR(14) as a percentage of price -------------------------------
         prev_close = close.shift(1)
-        tr = pd.concat([
-            (high - low),
-            (high - prev_close).abs(),
-            (low - prev_close).abs(),
-        ], axis=1).max(axis=1)
+        tr = pd.concat(
+            [
+                (high - low),
+                (high - prev_close).abs(),
+                (low - prev_close).abs(),
+            ],
+            axis=1,
+        ).max(axis=1)
         atr14 = tr.ewm(alpha=1.0 / 14, adjust=False, min_periods=14).mean()
         out['atr14_pct'] = atr14 / close
 

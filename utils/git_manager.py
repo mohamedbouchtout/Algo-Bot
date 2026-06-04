@@ -1,5 +1,5 @@
 """
-Class that manages git operations for the project, such as pulling updates, checking status, 
+Class that manages git operations for the project, such as pulling updates, checking status,
 and handling branches. This class can be used to automate git tasks within the project workflow.
 """
 
@@ -7,10 +7,12 @@ import logging
 import os
 import subprocess
 from datetime import datetime
+
 from core.connection import ConnectionManager
 
 # Setup logging
 logger = logging.getLogger()
+
 
 class GitManager:
     def __init__(self, ib, connection_manager: ConnectionManager, config, params):
@@ -28,7 +30,7 @@ class GitManager:
         if force_check or (now.hour >= 16 and not already_checked_today):
             if self.check_for_updates():
                 if self.pull_updates():
-                    logger.info("Updates pulled, restarting bot to apply new code...")
+                    logger.info('Updates pulled, restarting bot to apply new code...')
                     self.connection_manager.restart_bot()
             last_git_check = now
 
@@ -39,74 +41,67 @@ class GitManager:
         try:
             # Fetch latest from remote
             subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True)
-            
+
             # Compare local and remote (HEAD..origin/main only counts commits we're BEHIND on)
             result = subprocess.run(
                 ['git', 'rev-list', f'HEAD..origin/{self.config["git"]["main_branch"]}', '--count'],
                 cwd=self.base_dir,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            
+
             commits_behind = int(result.stdout.strip())
-            
+
             if commits_behind > 0:
-                logger.info(f"{commits_behind} new commit(s) available")
+                logger.info(f'{commits_behind} new commit(s) available')
                 return True
-            
+
             return False
-            
+
         except Exception as e:
-            logger.warning(f"Could not check for updates: {e}")
+            logger.warning(f'Could not check for updates: {e}')
             return False
-    
+
     def pull_updates(self) -> bool:
         """Pull latest changes from git using rebase to avoid merge commits"""
         try:
             # Fetch latest
-            logger.info("Pulling latest changes...")
+            logger.info('Pulling latest changes...')
 
             subprocess.run(['git', 'fetch', 'origin'], cwd=self.base_dir, check=True, capture_output=True, text=True)
             # Use rebase instead of merge to avoid creating merge commits
             result = subprocess.run(
-                ['git', 'rebase', f'origin/{self.config["git"]["main_branch"]}'],
-                cwd=self.base_dir,
-                capture_output=True,
-                text=True
+                ['git', 'rebase', f'origin/{self.config["git"]["main_branch"]}'], cwd=self.base_dir, capture_output=True, text=True
             )
 
             if result.returncode == 0:
-                logger.info("Rebase successful!")
+                logger.info('Rebase successful!')
                 return True
-            
+
             else:
                 # Rebase conflict detected
-                logger.error(f"Rebase conflict:\n{result.stderr}")
-                
+                logger.error(f'Rebase conflict:\n{result.stderr}')
+
                 # Try to auto-resolve
                 if self.auto_resolve_conflicts():
-                    logger.info("Conflicts staged, continuing rebase...")
+                    logger.info('Conflicts staged, continuing rebase...')
                     # Continue rebase
                     result = subprocess.run(
-                        ['git', 'rebase', '--continue'],
-                        cwd=self.base_dir,
-                        capture_output=True,
-                        text=True,
-                        env={**os.environ, 'GIT_EDITOR': 'true'}
+                        ['git', 'rebase', '--continue'], cwd=self.base_dir, capture_output=True, text=True, env={**os.environ, 'GIT_EDITOR': 'true'}
                     )
                     if result.returncode == 0:
-                        logger.info("Rebase completed after conflict resolution.")
+                        logger.info('Rebase completed after conflict resolution.')
                         return True
-                logger.error("Manual intervention required")
+                logger.error('Manual intervention required')
                 # Abort rebase if it's in progress
                 subprocess.run(['git', 'rebase', '--abort'], cwd=self.base_dir, check=False)
                 return False
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to rebase updates: {e}")
+            logger.error(f'Failed to rebase updates: {e}')
             # Abort rebase if it's in progress
             subprocess.run(['git', 'rebase', '--abort'], cwd=self.base_dir, check=False)
-            
+
             return False
 
     def auto_resolve_conflicts(self) -> bool:
@@ -116,103 +111,71 @@ class GitManager:
         """
         try:
             # Check which files have conflicts
-            status = subprocess.run(
-                ['git', 'status', '--porcelain'],
-                cwd=self.base_dir,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            
+            status = subprocess.run(['git', 'status', '--porcelain'], cwd=self.base_dir, capture_output=True, text=True, check=True)
+
             conflict_files = []
             for line in status.stdout.split('\n'):
                 if line.startswith('UU '):  # Unmerged files
                     conflict_files.append(line[3:].strip())
-            
+
             if not conflict_files:
                 return True
-            
-            logger.info(f"Resolving conflicts in: {conflict_files}")
-            
+
+            logger.info(f'Resolving conflicts in: {conflict_files}')
+
             for file in conflict_files:
                 # Strategy: Code files → use main, Data files → use ours
                 if file.endswith('.py') or (file.endswith('.json') and 'config/' in file):
                     # Code/config files: Accept changes from main
-                    logger.info(f"  {file}: Using version from {self.config['git']['main_branch']}")
-                    subprocess.run(
-                        ['git', 'checkout', '--theirs', file],
-                        cwd=self.base_dir,
-                        check=True
-                    )
+                    logger.info(f'  {file}: Using version from {self.config["git"]["main_branch"]}')
+                    subprocess.run(['git', 'checkout', '--theirs', file], cwd=self.base_dir, check=True)
                 elif 'data/' in file or file.endswith('.log'):
                     # Data/log files: Keep our version
-                    logger.info(f"  {file}: Keeping local version")
-                    subprocess.run(
-                        ['git', 'checkout', '--ours', file],
-                        cwd=self.base_dir,
-                        check=True
-                    )
+                    logger.info(f'  {file}: Keeping local version')
+                    subprocess.run(['git', 'checkout', '--ours', file], cwd=self.base_dir, check=True)
                 else:
                     # Unknown file: Use main version
-                    logger.warning(f"  {file}: Unknown type, using {self.config['git']['main_branch']} version")
-                    subprocess.run(
-                        ['git', 'checkout', '--theirs', file],
-                        cwd=self.base_dir,
-                        check=True
-                    )
-            
+                    logger.warning(f'  {file}: Unknown type, using {self.config["git"]["main_branch"]} version')
+                    subprocess.run(['git', 'checkout', '--theirs', file], cwd=self.base_dir, check=True)
+
             # Complete the rebase by staging the resolved files
-            subprocess.run(
-                ['git', 'add', '.'],
-                cwd=self.base_dir,
-                check=True
-            )
-            
+            subprocess.run(['git', 'add', '.'], cwd=self.base_dir, check=True)
+
             return True
-            
+
         except Exception as e:
-            logger.error(f"Failed to auto-resolve conflicts: {e}")
-            
+            logger.error(f'Failed to auto-resolve conflicts: {e}')
+
             # Abort the rebase
-            subprocess.run(
-                ['git', 'rebase', '--abort'],
-                cwd=self.base_dir,
-                check=False
-            )
-            
+            subprocess.run(['git', 'rebase', '--abort'], cwd=self.base_dir, check=False)
+
             return False
 
     def git_commit_and_push(self, message=None):
         """Commit and push changes to git"""
         try:
             if message is None:
-                message = f"Auto-commit: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            
+                message = f'Auto-commit: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+
             # Add all changes
             subprocess.run(['git', 'add', '.'], check=True)
-            
+
             # Check if there are changes to commit
-            status = subprocess.run(
-                ['git', 'status', '--porcelain'],
-                cwd=self.base_dir,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            
+            status = subprocess.run(['git', 'status', '--porcelain'], cwd=self.base_dir, capture_output=True, text=True, check=True)
+
             if not status.stdout.strip():
-                logger.debug("No changes to commit")
+                logger.debug('No changes to commit')
                 return True
 
             # Commit with message
             subprocess.run(['git', 'commit', '-m', message], cwd=self.base_dir, check=True, capture_output=True)
-            
+
             # Push to remote
             subprocess.run(['git', 'push'], cwd=self.base_dir, check=True)
-            
-            logger.info(f"Successfully pushed: {message}")
+
+            logger.info(f'Successfully pushed: {message}')
             return True
-            
+
         except subprocess.CalledProcessError as e:
-            logger.error(f"Git error: {e}")
+            logger.error(f'Git error: {e}')
             return False

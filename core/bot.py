@@ -3,21 +3,24 @@ Main TradingBot orchestrator
 Coordinates all modules
 """
 
-from datetime import datetime, timedelta
-import os
 import json
-from ib_insync import *
+import os
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+
+from ib_insync import *
+
 from core.connection import ConnectionManager
 from core.scheduler import Scheduler
-from data_fetch.stock_fetcher import StockTickerFetcher
 from data_fetch.historical_data import StockDataFetcher
+from data_fetch.stock_fetcher import StockTickerFetcher
 from execution.order_manager import OrderManager
 from execution.position_manager import PositionManager
-from utils.git_manager import GitManager
-from utils.alerts import AlertManager
-from utils.logger import setup_logger
 from strategy.ai_analysis.ai_analyzer import AIAnalyzer
+from utils.alerts import AlertManager
+from utils.git_manager import GitManager
+from utils.logger import setup_logger
+
 
 class TradingBot:
     TRAIN_INTERVAL = timedelta(days=6)
@@ -32,7 +35,7 @@ class TradingBot:
     def load_config(self):
         """Load configuration from JSON file"""
         file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/config.json')
-        with open(file_path, 'r') as file:
+        with open(file_path) as file:
             config = json.load(file)
 
         # If running in a container, override host to use Docker DNS
@@ -44,7 +47,7 @@ class TradingBot:
                 running_in_container = False
         if not running_in_container:
             try:
-                with open('/proc/1/cgroup', 'r') as cgroup_file:
+                with open('/proc/1/cgroup') as cgroup_file:
                     running_in_container = 'docker' in cgroup_file.read() or 'kubepods' in cgroup_file.read()
             except Exception:
                 running_in_container = running_in_container
@@ -57,7 +60,7 @@ class TradingBot:
     def load_params(self):
         """Load parameters from JSON file"""
         file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/trading_params.json')
-        with open(file_path, 'r') as file:
+        with open(file_path) as file:
             params = json.load(file)
         return params
 
@@ -71,10 +74,10 @@ class TradingBot:
             return False
         return datetime.now() - self.last_train_time >= self.TRAIN_INTERVAL
 
-    def train_modules(self, ai_analyzers: Dict[str, AIAnalyzer], stock_fetcher: StockTickerFetcher):
+    def train_modules(self, ai_analyzers: dict[str, AIAnalyzer], stock_fetcher: StockTickerFetcher):
         """Run a full pooled retrain of the RBM + CNN on the current ticker universe."""
         try:
-            self.logger.info("Starting AI training...")
+            self.logger.info('Starting AI training...')
 
             for ai_analyzer in ai_analyzers.values():
                 ai_analyzer.reset_dataset()
@@ -87,17 +90,17 @@ class TradingBot:
                         if ai_analyzers[sector].add_ticker(ticker):
                             added += 1
                             addedPerSector += 1
-                self.logger.info(f"Added {addedPerSector} tickers for {sector} sector")
-            
+                self.logger.info(f'Added {addedPerSector} tickers for {sector} sector')
+
             for ai_analyzer in ai_analyzers.values():
                 ai_analyzer.finalize_training(val_split=0.2)
-            
-            self.last_train_time = datetime.now()
-            self.logger.info(f"AI training finished: {added} tickers")
-        except Exception as e:
-            self.logger.error(f"AI training failed; bot will continue with previous model: {e}")
 
-    def sectored_ai_objects(self, stock_data: StockDataFetcher, stock_fetcher: StockTickerFetcher) -> Dict[str, AIAnalyzer]:
+            self.last_train_time = datetime.now()
+            self.logger.info(f'AI training finished: {added} tickers')
+        except Exception as e:
+            self.logger.error(f'AI training failed; bot will continue with previous model: {e}')
+
+    def sectored_ai_objects(self, stock_data: StockDataFetcher, stock_fetcher: StockTickerFetcher) -> dict[str, AIAnalyzer]:
         """Create separate AI analyzers for each sector"""
         sector_analyzers = {}
         for sector in stock_fetcher.categorized_stocks:
@@ -107,8 +110,8 @@ class TradingBot:
 
     def run(self):
         """Main bot loop"""
-        self.logger.info("Starting trading bot...")
-        
+        self.logger.info('Starting trading bot...')
+
         stock_fetcher = StockTickerFetcher()
         stock_data = StockDataFetcher(self.ib, self.config, self.params)
         scheduler = Scheduler()
@@ -129,12 +132,12 @@ class TradingBot:
             while not connection_manager.connect():
                 connect_attempts += 1
                 if connect_attempts >= max_connect_retries:
-                    self.logger.error(f"Failed to connect after {max_connect_retries} attempts, exiting")
-                    alert_manager.alert_error("Connection Failed", f"Could not connect to IB after {max_connect_retries} attempts")
+                    self.logger.error(f'Failed to connect after {max_connect_retries} attempts, exiting')
+                    alert_manager.alert_error('Connection Failed', f'Could not connect to IB after {max_connect_retries} attempts')
                     return
-                self.logger.warning(f"Cannot connect to IB - will retry in 1 minute (attempt {connect_attempts}/{max_connect_retries})")
+                self.logger.warning(f'Cannot connect to IB - will retry in 1 minute (attempt {connect_attempts}/{max_connect_retries})')
                 self.ib.sleep(60)
-        
+
             # Cold-start training if no model exists
             if self.should_retrain(scheduler):
                 self.train_modules(ai_analyzers, stock_fetcher)
@@ -144,25 +147,25 @@ class TradingBot:
                 connected = connection_manager.ensure_connected()
 
                 if market_open and connected:
-                    self.logger.info(f"Market is open. Scanning for signals...")
+                    self.logger.info('Market is open. Scanning for signals...')
 
                     order_manager.scan_stocks(stock_fetcher.categorized_stocks)
                     position_manager.monitor_positions()
                     last_git_check = git_manager.git(last_git_check)
 
-                    self.logger.info(f"Waiting {self.params['timing']['scan_interval']} seconds until next scan...")
+                    self.logger.info(f'Waiting {self.params["timing"]["scan_interval"]} seconds until next scan...')
                     self.ib.sleep(self.params['timing']['scan_interval'])
 
                 elif market_open and not connected:
-                    self.logger.warning("Cannot connect to IB - will retry in 1 minute")
+                    self.logger.warning('Cannot connect to IB - will retry in 1 minute')
                     last_git_check = git_manager.git(last_git_check)
                     self.ib.sleep(60)
 
                 else:
                     if not connected:
-                        self.logger.warning("Market is closed and IB disconnected. Next check in 10 minutes...")
+                        self.logger.warning('Market is closed and IB disconnected. Next check in 10 minutes...')
                     else:
-                        self.logger.info(f"Market is closed. Next check in 10 minutes...")
+                        self.logger.info('Market is closed. Next check in 10 minutes...')
 
                     last_git_check = git_manager.git(last_git_check)
 
@@ -170,12 +173,12 @@ class TradingBot:
                         self.train_modules(ai_analyzers, stock_fetcher)
 
                     self.ib.sleep(600)
-                    
+
         except KeyboardInterrupt:
-            self.logger.info("Bot stopped by user")
+            self.logger.info('Bot stopped by user')
             alert_manager.alert_bot_stopped()
         except Exception as e:
-            self.logger.error(f"Bot error: {e}")
-            alert_manager.alert_error(str(e), "Unexpected bot error thrown.")
+            self.logger.error(f'Bot error: {e}')
+            alert_manager.alert_error(str(e), 'Unexpected bot error thrown.')
         finally:
-            connection_manager.disconnect() 
+            connection_manager.disconnect()

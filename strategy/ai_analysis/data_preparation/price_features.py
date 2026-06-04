@@ -7,9 +7,10 @@ tickers can be combined into a single training set.
 """
 
 import logging
+from typing import List
+
 import numpy as np
 import pandas as pd
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +19,15 @@ class PriceFeatureExtractor:
     """Extract scale-free price features from an OHLC DataFrame."""
 
     # Columns this extractor adds to the output (in order)
-    FEATURE_NAMES: List[str] = [
+    FEATURE_NAMES: list[str] = [
         'log_return_1d',
         'log_return_5d',
-        'close_vs_ma20',      # (close / ma20) - 1
+        'close_vs_ma20',  # (close / ma20) - 1
         'close_vs_ma50',
         'close_vs_ma200',
-        'daily_range_pct',    # (high - low) / close
+        'daily_range_pct',  # (high - low) / close
         'close_to_high_pct',  # (high - close) / close
-        'close_to_low_pct',   # (close - low) / close
+        'close_to_low_pct',  # (close - low) / close
     ]
 
     def extract(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -45,7 +46,7 @@ class PriceFeatureExtractor:
         required = {'close', 'high', 'low'}
         missing = required - set(df.columns)
         if missing:
-            raise ValueError(f"PriceFeatureExtractor missing columns: {missing}")
+            raise ValueError(f'PriceFeatureExtractor missing columns: {missing}')
 
         close = df['close'].astype(float)
         high = df['high'].astype(float)

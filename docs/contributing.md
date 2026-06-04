@@ -9,7 +9,7 @@
 
 ## Code Standards
 
-- Follow PEP 8 style guidelines
+- Code is linted and formatted with [ruff](https://docs.astral.sh/ruff/) (configured in `pyproject.toml`)
 - Add type hints to function signatures
 - Use `logging` instead of `print` statements
 - Use the project's existing logger setup: `logger = logging.getLogger()`
@@ -34,19 +34,39 @@
 4. Integrate with `order_manager.py` to call your strategy during scans
 5. Add persistence support in `position_manager.py` if your signal has custom fields
 
-## Running Tests
+## Running Checks
+
+Run all checks locally before pushing (same checks that CI runs):
 
 ```bash
-python tests_main.py
+nox
 ```
 
-Requires TWS or IB Gateway running (tests connect to IB for order/position integration).
+This runs linting and unit tests. You can also run individual sessions:
 
-Test files are in `tests/`:
-- `test_retest_200ma.py` — Strategy pattern detection
-- `test_ai_analysis.py` — AI pipeline data flow
-- `test_position_manager.py` — Position tracking logic
-- `test_risk_manager.py` — Risk calculation validation
+```bash
+nox -s lint          # ruff linting + format check
+nox -s test          # pytest unit tests
+nox -s typecheck     # mypy type checking
+nox -s fix           # auto-fix lint errors and reformat code
+```
+
+Run `nox -s fix` before pushing to auto-format your code and fix lint errors.
+
+### Integration Tests
+
+The full integration test suite requires TWS or IB Gateway running:
+
+```bash
+python -c "from tests.run_tests import RunTests; RunTests().run()"
+```
+
+### Test Files
+
+- `test_risk_manager.py` — Position sizing and risk calculation (unit tests, no IB needed)
+- `test_retest_200ma.py` — Strategy pattern detection (integration, needs IB)
+- `test_ai_analysis.py` — AI pipeline training and prediction (integration, needs IB)
+- `test_ai_backtest.py` — Walk-forward AI performance backtest (integration, needs IB)
 
 Test logs are written to `data/test_logs/`.
 
@@ -71,8 +91,7 @@ Key design decisions:
 
 ## Pull Request Workflow
 
-1. Make sure all tests pass: `python tests_main.py`
-2. Verify syntax: `python -m py_compile <your_file>.py`
+1. Run `nox` to verify linting and tests pass
 3. Commit with a clear message describing what and why
 4. Push to your fork
 5. Open a pull request against `main`

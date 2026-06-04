@@ -80,12 +80,11 @@ python-dotenv==1.0.0
 # -------------------------------
 # Development & Testing
 # -------------------------------
-# Uncomment for development
-# pytest==7.4.3
-# pytest-cov==4.1.0
-# black==23.12.1
-# flake8==6.1.0
-# mypy==1.7.1
+nox==2024.4.15
+pytest==8.3.5
+pytest-cov==6.1.1
+ruff==0.11.13
+mypy==1.14.1
 
 # -------------------------------
 # Production: Process Management

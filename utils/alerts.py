@@ -4,17 +4,20 @@ Sends email notifications for trades and daily summaries via Gmail SMTP (FREE)
 """
 
 import os
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import logging
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Dict, Optional
 
 logger = logging.getLogger()
+
 
 class AlertManager:
     def __init__(self, config: dict, params: dict):
@@ -25,79 +28,79 @@ class AlertManager:
         self.params = params
         self.enabled = self.config.get('enabled', False)
         self.to_email = self.config.get('email', '')
-        
+
         # Gmail SMTP settings
         self.smtp_host = 'smtp.gmail.com'
         self.smtp_port = 587
-        
+
         # Get credentials from environment variables
         self.from_email = os.getenv('GMAIL_USER')
         self.password = os.getenv('GMAIL_PASSWORD')
-        
+
         # Validate setup
         if self.enabled:
             if not self.from_email or not self.password:
-                logger.error("Gmail credentials not found in environment variables")
-                logger.error("Add GMAIL_USER and GMAIL_PASSWORD to your .env file")
+                logger.error('Gmail credentials not found in environment variables')
+                logger.error('Add GMAIL_USER and GMAIL_PASSWORD to your .env file')
                 self.enabled = False
             elif not self.to_email:
-                logger.error("No recipient email configured in config")
+                logger.error('No recipient email configured in config')
                 self.enabled = False
             else:
-                logger.info(f"Email alerts initialized ({self.from_email} → {self.to_email})")
+                logger.info(f'Email alerts initialized ({self.from_email} → {self.to_email})')
         else:
-            logger.info("Email alerts disabled in config")
-    
+            logger.info('Email alerts disabled in config')
+
     def send_email(self, subject: str, body: str) -> bool:
         """
         Send email via Gmail SMTP
-        
+
         Args:
             subject: Email subject line
             body: Email body (plain text or HTML)
-        
+
         Returns:
             True if sent successfully, False otherwise
         """
         if not self.enabled:
-            logger.debug(f"Alerts disabled - would have sent: {subject}")
+            logger.debug(f'Alerts disabled - would have sent: {subject}')
             return False
-        
+
         try:
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
             msg['From'] = self.from_email
             msg['To'] = self.to_email
-            
+
             # Auto-detect if body is HTML
             if body.strip().startswith('<'):
                 msg.attach(MIMEText(body, 'html'))
             else:
                 msg.attach(MIMEText(body, 'plain'))
-            
+
             # Send via Gmail SMTP
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.from_email, self.password)
                 server.send_message(msg)
-            
-            logger.info(f"Email sent: {subject}")
+
+            logger.info(f'Email sent: {subject}')
             return True
-            
+
         except smtplib.SMTPAuthenticationError:
-            logger.error("Gmail authentication failed - check your app password")
+            logger.error('Gmail authentication failed - check your app password')
             return False
         except Exception as e:
-            logger.error(f"Failed to send email: {e}")
+            logger.error(f'Failed to send email: {e}')
             return False
-    
+
     # ==================== Trading Alerts ====================
-    
-    def alert_trade_entry(self, signal: Dict) -> None:
+
+    def alert_trade_entry(self, signal: dict) -> None:
         """
         Alert when entering a trade
-        
+
         Args:
             signal: Trade signal dictionary with all trade details
         """
@@ -109,9 +112,9 @@ class AlertManager:
         shares = signal.get('shares', 0)
         risk = signal.get('risk', 0)
         reward = signal.get('reward', 0)
-        
-        subject = f"🟢 Trade Entered: {trade_type} {symbol}"
-        
+
+        subject = f'🟢 Trade Entered: {trade_type} {symbol}'
+
         body = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -169,15 +172,22 @@ class AlertManager:
 </body>
 </html>
 """
-        
+
         self.send_email(subject, body)
-    
-    def alert_trade_exit(self, symbol: str, exit_type: str, pnl: float, pnl_pct: float, 
-                        entry_price: Optional[float] = None, exit_price: Optional[float] = None,
-                        shares: Optional[int] = None) -> None:
+
+    def alert_trade_exit(
+        self,
+        symbol: str,
+        exit_type: str,
+        pnl: float,
+        pnl_pct: float,
+        entry_price: float | None = None,
+        exit_price: float | None = None,
+        shares: int | None = None,
+    ) -> None:
         """
         Alert when a trade exits
-        
+
         Args:
             symbol: Stock symbol
             exit_type: How the trade exited (Stop Loss, Take Profit, Manual)
@@ -187,12 +197,12 @@ class AlertManager:
             exit_price: Exit price (optional)
             shares: Number of shares (optional)
         """
-        emoji = "✅" if pnl > 0 else "❌"
-        color = "#2E7D32" if pnl > 0 else "#C62828"
-        
-        subject = f"{emoji} Trade Closed: {symbol} ({exit_type})"
-        
-        additional_info = ""
+        emoji = '✅' if pnl > 0 else '❌'
+        color = '#2E7D32' if pnl > 0 else '#C62828'
+
+        subject = f'{emoji} Trade Closed: {symbol} ({exit_type})'
+
+        additional_info = ''
         if entry_price and exit_price and shares:
             additional_info = f"""
     <h3>Trade Details</h3>
@@ -211,7 +221,7 @@ class AlertManager:
         </tr>
     </table>
 """
-        
+
         body = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -243,13 +253,13 @@ class AlertManager:
 </body>
 </html>
 """
-        
+
         self.send_email(subject, body)
-    
-    def alert_daily_summary(self, summary: Dict) -> None:
+
+    def alert_daily_summary(self, summary: dict) -> None:
         """
         Send daily P&L summary
-        
+
         Args:
             summary: Dictionary with daily statistics
         """
@@ -258,17 +268,17 @@ class AlertManager:
         win_rate_today = summary.get('win_rate_today', 0)
         active_positions = summary.get('active_positions', 0)
         account_value = summary.get('account_value', 0)
-        
-        emoji = "📈" if pnl_today > 0 else "📉" if pnl_today < 0 else "➡️"
-        color = "#2E7D32" if pnl_today > 0 else "#C62828" if pnl_today < 0 else "#666"
-        
-        subject = f"{emoji} Daily Summary - {datetime.now().strftime('%Y-%m-%d')} - ${pnl_today:+,.2f}"
-        
+
+        emoji = '📈' if pnl_today > 0 else '📉' if pnl_today < 0 else '➡️'
+        color = '#2E7D32' if pnl_today > 0 else '#C62828' if pnl_today < 0 else '#666'
+
+        subject = f'{emoji} Daily Summary - {datetime.now().strftime("%Y-%m-%d")} - ${pnl_today:+,.2f}'
+
         # Build trade details table
-        trade_rows = ""
+        trade_rows = ''
         if 'trades' in summary and summary['trades']:
             for trade in summary['trades']:
-                trade_color = "#2E7D32" if trade.get('pnl', 0) > 0 else "#C62828"
+                trade_color = '#2E7D32' if trade.get('pnl', 0) > 0 else '#C62828'
                 trade_rows += f"""
         <tr>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">{trade.get('symbol', 'N/A')}</td>
@@ -298,8 +308,8 @@ class AlertManager:
     </table>
 """
         else:
-            trades_table = f"<p>No trades executed today.</p>"
-        
+            trades_table = '<p>No trades executed today.</p>'
+
         body = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -357,19 +367,19 @@ class AlertManager:
 </body>
 </html>
 """
-        
+
         self.send_email(subject, body)
-    
+
     def alert_error(self, error_type: str, message: str) -> None:
         """
         Alert for critical errors
-        
+
         Args:
             error_type: Type of error
             message: Error message
         """
-        subject = f"⚠️ Trading Bot Error: {error_type}"
-        
+        subject = f'⚠️ Trading Bot Error: {error_type}'
+
         body = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -401,13 +411,13 @@ class AlertManager:
 </body>
 </html>
 """
-        
+
         self.send_email(subject, body)
-    
+
     def alert_bot_started(self) -> None:
         """Alert when bot starts"""
-        subject = "🚀 Trading Bot Started"
-        
+        subject = '🚀 Trading Bot Started'
+
         body = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -432,13 +442,13 @@ class AlertManager:
 </body>
 </html>
 """
-        
+
         self.send_email(subject, body)
-    
-    def alert_bot_stopped(self, reason: str = "User initiated") -> None:
+
+    def alert_bot_stopped(self, reason: str = 'User initiated') -> None:
         """Alert when bot stops"""
-        subject = "🛑 Trading Bot Stopped"
-        
+        subject = '🛑 Trading Bot Stopped'
+
         body = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -463,5 +473,5 @@ class AlertManager:
 </body>
 </html>
 """
-        
+
         self.send_email(subject, body)

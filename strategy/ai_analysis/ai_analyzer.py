@@ -41,9 +41,9 @@ import yfinance as yf
 
 from data_fetch.historical_data import StockDataFetcher
 from execution.risk_manager import RiskManager
+from strategy.ai_analysis.cnn_trainer import CNNTrainer
 from strategy.ai_analysis.data_preparation.feature_builder import FeatureBuilder
 from strategy.ai_analysis.rbm_trainer import RBMTrainer
-from strategy.ai_analysis.cnn_trainer import CNNTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -54,16 +54,16 @@ class AIAnalyzer:
     def __init__(
         self,
         stock_data: StockDataFetcher,
-        feature_builder: Optional[FeatureBuilder] = None,
+        feature_builder: FeatureBuilder | None = None,
         rbm_hidden_dim: int = 64,
         rbm_epochs: int = 30,
         cnn_epochs: int = 20,
-        params: Optional[Dict] = None,
+        params: dict | None = None,
     ):
         self.stock_data = stock_data
         self.feature_builder = feature_builder or FeatureBuilder(window_size=10, n_bits=4)
-        self.rbm_trainer: Optional[RBMTrainer] = None
-        self.cnn_trainer: Optional[CNNTrainer] = None
+        self.rbm_trainer: RBMTrainer | None = None
+        self.cnn_trainer: CNNTrainer | None = None
         self.rbm_epochs = rbm_epochs
         self.cnn_epochs = cnn_epochs
         self.rbm_hidden_dim = rbm_hidden_dim
@@ -71,15 +71,15 @@ class AIAnalyzer:
 
         # Cache raw bars per ticker so we don't hit IB twice when building the
         # dataset and then the labelled samples.
-        self._bar_cache: Dict[str, pd.DataFrame] = {}
+        self._bar_cache: dict[str, pd.DataFrame] = {}
 
         # Per-ticker continuous features accumulated across add_ticker() calls.
         # These get concatenated into the bin-edges fit in finalize_training().
-        self._continuous_per_ticker: List[pd.DataFrame] = []
-        self._kept_tickers: List[str] = []
+        self._continuous_per_ticker: list[pd.DataFrame] = []
+        self._kept_tickers: list[str] = []
 
     # =================================================================== data
-    def _get_bars(self, symbol: str) -> Optional[pd.DataFrame]:
+    def _get_bars(self, symbol: str) -> pd.DataFrame | None:
         if symbol in self._bar_cache:
             return self._bar_cache[symbol]
         df = self.stock_data.get_historical_data(symbol, self.params['ai_analyzer']['lookback_days'])
@@ -107,29 +107,26 @@ class AIAnalyzer:
         False if it was skipped (insufficient data / extraction error / already added).
         """
         if symbol in self._kept_tickers:
-            logger.debug(f"{symbol}: already in dataset, skipping")
+            logger.debug(f'{symbol}: already in dataset, skipping')
             return False
 
         bars = self._get_bars(symbol)
         if bars is None or len(bars) < 250:
-            logger.info(f"Skipping {symbol}: insufficient bars")
+            logger.info(f'Skipping {symbol}: insufficient bars')
             return False
 
         try:
             feats = self.feature_builder.build_continuous_features(bars)
         except ValueError as e:
-            logger.warning(f"{symbol}: {e}")
+            logger.warning(f'{symbol}: {e}')
             return False
 
         self._continuous_per_ticker.append(feats)
         self._kept_tickers.append(symbol)
-        logger.debug(
-            f"Added {symbol} to dataset "
-            f"({len(self._kept_tickers)} tickers accumulated)"
-        )
+        logger.debug(f'Added {symbol} to dataset ({len(self._kept_tickers)} tickers accumulated)')
         return True
 
-    def build_dataset(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def build_dataset(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Assemble the pooled training tensors from whatever has been accumulated
         via `add_ticker()`.
@@ -142,9 +139,7 @@ class AIAnalyzer:
         ids    : (N,) int64                 per-sample ticker index for diagnostics.
         """
         if not self._continuous_per_ticker:
-            raise RuntimeError(
-                "No tickers in dataset, call add_ticker() (or train(tickers)) first"
-            )
+            raise RuntimeError('No tickers in dataset, call add_ticker() (or train(tickers)) first')
 
         self.feature_builder.fit_bin_edges(self._continuous_per_ticker)
 
@@ -160,7 +155,7 @@ class AIAnalyzer:
             ticker_ids.append(np.full(len(rbm_x), idx, dtype=np.int64))
 
         if not rbm_chunks:
-            raise RuntimeError("No tickers produced usable windowed samples")
+            raise RuntimeError('No tickers produced usable windowed samples')
 
         rbm_all = np.concatenate(rbm_chunks, axis=0)
         cnn_all = np.concatenate(cnn_chunks, axis=0)
@@ -168,9 +163,9 @@ class AIAnalyzer:
         ids_all = np.concatenate(ticker_ids, axis=0)
 
         logger.info(
-            f"Dataset built: {len(rbm_all)} samples across {len(self._kept_tickers)} tickers "
-            f"(visible_dim={rbm_all.shape[1]}, cnn_len={cnn_all.shape[1]}, "
-            f"class counts={np.bincount(labels_all, minlength=3).tolist()})"
+            f'Dataset built: {len(rbm_all)} samples across {len(self._kept_tickers)} tickers '
+            f'(visible_dim={rbm_all.shape[1]}, cnn_len={cnn_all.shape[1]}, '
+            f'class counts={np.bincount(labels_all, minlength=3).tolist()})'
         )
         return rbm_all, cnn_all, labels_all, ids_all
 
@@ -183,8 +178,7 @@ class AIAnalyzer:
         """
         if len(self._kept_tickers) < 2:
             logger.warning(
-                f"finalize_training() called with only {len(self._kept_tickers)} "
-                "ticker(s); pooled training needs several tickers to generalise."
+                f'finalize_training() called with only {len(self._kept_tickers)} ticker(s); pooled training needs several tickers to generalise.'
             )
 
         rbm_x, cnn_x, labels, _ = self.build_dataset()
@@ -209,7 +203,7 @@ class AIAnalyzer:
         )
         self.cnn_trainer.train(cnn_x, rbm_feats, labels, val_split=val_split)
 
-    def train(self, tickers: List[str], val_split: float = 0.2) -> None:
+    def train(self, tickers: list[str], val_split: float = 0.2) -> None:
         """
         Convenience wrapper: accumulate every ticker in `tickers`, then fit.
         Equivalent to calling `add_ticker()` in a loop and then
@@ -220,13 +214,13 @@ class AIAnalyzer:
         self.finalize_training(val_split=val_split)
 
     # ================================================================ predict
-    def predict(self, symbol: str) -> Optional[Dict]:
+    def predict(self, symbol: str) -> dict | None:
         """
         Fetch the latest bars for `symbol`, build the most recent window and
         classify it.  Returns None if anything is missing / not trained.
         """
         if self.rbm_trainer is None or self.cnn_trainer is None:
-            raise RuntimeError("Call train() or finalize_training() before predict()")
+            raise RuntimeError('Call train() or finalize_training() before predict()')
 
         df = self.stock_data.get_historical_data(symbol, self.params['ai_analyzer']['lookback_days'])
         if df is None or len(df) < 250:
@@ -250,7 +244,7 @@ class AIAnalyzer:
             'probs': {self.CLASS_NAMES[i]: float(p) for i, p in enumerate(probs[0])},
         }
 
-    def construct_signal(self, df: pd.DataFrame, params, class_type: str, confidence: float) -> Optional[Dict]:
+    def construct_signal(self, df: pd.DataFrame, params, class_type: str, confidence: float) -> dict | None:
         """Construct a trading signal dict based on the most recent prediction."""
         entry_price = df['close'].iloc[-1]
         symbol = df['symbol'].iloc[0]
@@ -287,7 +281,7 @@ class AIAnalyzer:
             'entry': entry_price,
             'stop': stop_loss,
             'target': target_price,
-            "risk": risk,
-            "reward": risk * params['ai_analyzer']['risk_reward_ratio'],
-            'confidence': confidence
+            'risk': risk,
+            'reward': risk * params['ai_analyzer']['risk_reward_ratio'],
+            'confidence': confidence,
         }
