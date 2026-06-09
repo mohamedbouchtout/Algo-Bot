@@ -44,86 +44,113 @@ Stop losses are calculated using the daily range and VIX:
 
 ## AI Analysis Pipeline
 
-An optional machine learning pipeline that classifies each ticker as LONG, FLAT, or SHORT based on learned patterns in price, volume, and technical indicators.
+A machine learning pipeline that classifies each ticker as LONG, FLAT, or SHORT based on learned patterns in price, volume, technical indicators, and market regime features. The default model is an LSTM (Long Short-Term Memory) network, with a CNN option available.
 
 ### Architecture
 
 ```
-OHLCV bars (from yfinance)
+OHLCV bars (via yfinance)
     |
     v
-Feature Extractors (17 scale-free features per bar)
+Feature Extractors (20 scale-free features per bar)
+    |- PriceFeatureExtractor      (8 features)
+    |- VolumeFeatureExtractor     (4 features)
+    |- IndicatorFeatureExtractor  (5 features)
+    |- MarketFeatureExtractor     (3 features: VIX, SPY trend, SPY vs 200MA)
     |
     v
 FeatureBuilder
-    |- fit_bin_edges()     quantile-based binning across all tickers
-    |- binarize()          thermometer encoding (n_bits per feature)
-    |- build_windows()     sliding windows of length window_size
-    |
-    |--- rbm_x   (N, window_size x 17 x n_bits)  uint8     --> RBM input
-    |--- cnn_x   (N, window_size x 17)            float32   --> CNN input
-    |--- labels  {0: SHORT, 1: FLAT, 2: LONG}               from forward return
+    |- build_windows()   sliding windows of 10 consecutive days
+    |- Volatility-adjusted labels (forward return / ATR)
     |
     v
-RBMTrainer (unsupervised, TensorFlow)
-    |- Learns compressed hidden features from binarised windows
-    |
-    v
-CNNTrainer (supervised, PyTorch)
-    |- Input: continuous features + RBM hidden features
-    |- Output: softmax over {SHORT, FLAT, LONG}
+LSTMTrainer or CNNTrainer (PyTorch, selected via model_type)
+    |- LSTM: processes window as a sequence (10 timesteps x 20 features)
+    |- CNN:  processes window as a flattened 1-D signal (200 values)
+    |- Early stopping with best-weight restore
+    |- Weight decay regularization
     |
     v
 AIAnalyzer.predict(symbol) --> {'class': 'LONG', 'probs': {...}}
 ```
 
-### Feature Set (17 features per bar)
+### Model Types
+
+The `AIAnalyzer` supports two model architectures via the `model_type` parameter:
+
+| Model | `model_type` | How it works | Best for |
+|-------|-------------|--------------|----------|
+| **LSTM** (default) | `'lstm'` | Processes the 10-day window as a sequence, learning temporal dependencies between consecutive days | Capturing sequential patterns (e.g., 3-day momentum followed by a reversal) |
+| **CNN** | `'cnn'` | Processes the window as a flattened 1-D signal through convolutional filters | Detecting local patterns regardless of position in the window |
+
+The LSTM is the default because financial time series are inherently sequential — the order of bars matters, and LSTMs are designed to model that.
+
+### Feature Set (20 features per bar)
 
 | Group | Features |
 |-------|----------|
-| **Price** | `log_return_1d`, `log_return_5d`, `close_vs_ma20`, `close_vs_ma50`, `close_vs_ma200`, `daily_range_pct`, `close_to_high_pct`, `close_to_low_pct` |
-| **Volume** | `volume_ratio_20`, `volume_ratio_50`, `volume_log_change`, `obv_slope_20` |
-| **Indicators** | `rsi14`, `macd_hist_norm`, `bb_position`, `atr14_pct`, `ma200_slope_pct` |
+| **Price** (8) | `log_return_1d`, `log_return_5d`, `close_vs_ma20`, `close_vs_ma50`, `close_vs_ma200`, `daily_range_pct`, `close_to_high_pct`, `close_to_low_pct` |
+| **Volume** (4) | `volume_ratio_20`, `volume_ratio_50`, `volume_log_change`, `obv_slope_20` |
+| **Indicators** (5) | `rsi14`, `macd_hist_norm`, `bb_position`, `atr14_pct`, `ma200_slope_pct` |
+| **Market Regime** (3) | `vix_normalized`, `spy_50d_return`, `spy_vs_ma200` |
 
-All features are scale-free so different tickers can be pooled into a single training corpus.
+All features are scale-free so different tickers can be pooled into a single training corpus. Market regime features provide context about the broader market (bull/bear, high/low volatility).
 
-### Labels
+### Volatility-Adjusted Labels
 
-Each sliding window is labelled by the forward return over `forward_horizon` bars:
+Labels are generated from forward returns normalized by each stock's volatility:
 
-| Forward Return | Class |
-|---|---|
-| > `label_threshold` | 2 = LONG |
-| Between -threshold and +threshold | 1 = FLAT |
-| < -`label_threshold` | 0 = SHORT |
+```
+adjusted_return = forward_return / ATR(14)%
 
-Defaults: `forward_horizon = 5` days, `label_threshold = 0.01` (1%).
+If adjusted_return > volatility_threshold  → LONG  (2)
+If adjusted_return < -volatility_threshold → SHORT (0)
+Otherwise                                 → FLAT  (1)
+```
+
+This means a 1% move on a low-volatility utility stock is treated as a stronger signal than a 1% move on a high-volatility biotech stock. The default `volatility_threshold` is `1.0` (one ATR).
+
+Fixed-threshold labels (`label_threshold = 0.01`) are available by setting `volatility_adjusted_labels=False` in `FeatureBuilder`.
 
 ### Training
 
-The bot trains AI models automatically on weekends when the market is closed. Training is done per-sector — each sector gets its own RBM + CNN trained on all tickers in that sector.
+The bot trains AI models automatically on weekends when the market is closed. Training is done per-sector — each sector gets its own model trained on all tickers in that sector.
 
 The training pipeline:
-1. Fetches historical data for every ticker in the sector
-2. Extracts continuous features and pools them
-3. Fits quantile-based bin edges across the pooled data
-4. Trains the RBM (unsupervised feature learning)
-5. Extracts hidden features from the RBM
-6. Trains the CNN on continuous features + RBM features with forward-return labels
+1. Fetches historical data for every ticker in the sector (via yfinance)
+2. Extracts 20 continuous features per bar and pools them
+3. Builds 10-day sliding windows with volatility-adjusted labels
+4. Trains the LSTM (or CNN) with early stopping and weight decay
+5. Best model weights are restored after training
+
+### Walk-Forward Cross-Validation
+
+For model evaluation, use `walk_forward_train()` instead of the standard `train()`:
+
+```python
+analyzer.walk_forward_train(n_splits=5)
+```
+
+This runs expanding-window validation: train on the first 50% of data, validate on the next 10%, then expand the training window and repeat. Each fold trains a fresh model, and per-fold accuracy is reported. After all folds, a final model is trained on all data for live prediction.
+
+### Early Stopping
+
+Both the LSTM and CNN trainers use early stopping:
+- Tracks validation loss each epoch
+- If no improvement for `patience` epochs (default 5), training stops
+- Restores the best model weights (lowest validation loss)
+- Prevents overfitting on small datasets
 
 ### Standalone Usage
 
 ```python
 from data_fetch.historical_data import StockDataFetcher
 from strategy.ai_analysis.ai_analyzer import AIAnalyzer
-from strategy.ai_analysis.data_preparation.feature_builder import FeatureBuilder
 
 data = StockDataFetcher()
 analyzer = AIAnalyzer(
     stock_data=data,
-    feature_builder=FeatureBuilder(window_size=10, n_bits=4),
-    rbm_hidden_dim=64,
-    rbm_epochs=30,
+    model_type='lstm',      # or 'cnn'
     cnn_epochs=20,
     params=params,
 )
@@ -132,33 +159,38 @@ analyzer.train(['AAPL', 'MSFT', 'GOOGL', ...], val_split=0.2)
 print(analyzer.predict('AAPL'))
 # {'symbol': 'AAPL', 'class': 'LONG', 'class_id': 2,
 #  'probs': {'SHORT': 0.12, 'FLAT': 0.31, 'LONG': 0.57}}
+
+# Or with walk-forward validation:
+metrics = analyzer.walk_forward_train(n_splits=5)
+print(f"Avg accuracy: {metrics['avg_accuracy']:.3f}")
 ```
 
 ### Configuration Knobs
 
 | Parameter | Location | Effect |
 |---|---|---|
-| `window_size` | `FeatureBuilder` | Consecutive days per training sample |
-| `n_bits` | `FeatureBuilder` | Thermometer-encoding resolution per feature |
-| `forward_horizon` | `FeatureBuilder` | Bars ahead used to label each window |
-| `label_threshold` | `FeatureBuilder` | Forward-return cutoff separating LONG/SHORT from FLAT |
-| `rbm_hidden_dim` | `AIAnalyzer` | Size of learned representation passed to CNN |
-| `rbm_epochs` | `AIAnalyzer` | Contrastive-divergence training epochs |
-| `cnn_epochs` | `AIAnalyzer` | Supervised training epochs |
+| `model_type` | `AIAnalyzer` | `'lstm'` (default) or `'cnn'` |
+| `window_size` | `FeatureBuilder` | Consecutive days per training sample (default 10) |
+| `forward_horizon` | `FeatureBuilder` | Bars ahead used to label each window (default 5) |
+| `volatility_threshold` | `FeatureBuilder` | ATR-normalized return threshold for labels (default 1.0) |
+| `volatility_adjusted_labels` | `FeatureBuilder` | `True` (default) to normalize returns by volatility |
+| `cnn_epochs` | `AIAnalyzer` | Max training epochs (early stopping may end sooner) |
+| `patience` | `CNNTrainer`/`LSTMTrainer` | Epochs without improvement before stopping (default 5) |
 | `confidence_threshold` | `trading_params.json` | Minimum softmax probability to generate a signal |
 
-### Training Artifacts
+### Backtesting
 
-Training writes to a `results/` directory:
+The backtest (`tests/test_ai_backtest.py`) simulates live trading on historical data using the same per-sector model architecture:
 
-```
-results/
-├── logs/           # TensorBoard event files
-└── models/         # Per-epoch RBM weight snapshots (.h5)
-```
+1. Fetches historical data and splits into train/test periods (75/25)
+2. Trains one AI model per sector on the training period
+3. Walks forward through the test period day by day
+4. Makes predictions using the correct sector's model
+5. Simulates bracket-order trades (entry, stop loss, take profit)
+6. Reports per-trade P&L, win rate, total return, profit factor, max drawdown, and per-sector breakdown
 
 ### Notes
 
-- **More data is better**: The default `lookback_days = 250` leaves only ~15 usable windows per ticker after MA warm-up. For better training, use `lookback_days = 2000` or more.
-- **Class imbalance**: FLAT usually dominates. Watch the `class counts` log line and tune `label_threshold` / `forward_horizon` if needed.
+- **More data is better**: Use `lookback_days = 1825` or more for AI training.
+- **Class imbalance**: Volatility-adjusted labels produce more balanced classes than fixed thresholds. Watch the `class counts` log line.
 - Historical data is fetched via yfinance (no IB connection or rate limits required for data).

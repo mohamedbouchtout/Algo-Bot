@@ -50,6 +50,7 @@ def test(session):
         'pandas',
         'numpy',
         'yfinance',
+        'torch',
     )
     session.run(
         'pytest',

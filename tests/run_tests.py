@@ -12,6 +12,7 @@ from data_fetch.historical_data import StockDataFetcher
 from data_fetch.stock_fetcher import StockTickerFetcher
 from execution.position_manager import PositionManager
 from tests.test_ai_analysis import TestAIanalysis
+from tests.test_ai_backtest import TestAIBacktest
 from tests.test_retest_200ma import TestRetest200MA
 from utils.alerts import AlertManager
 from utils.logger import setup_logger
@@ -59,6 +60,7 @@ class RunTests:
         if running_in_container:
             config['ib']['host'] = os.getenv('IB_HOST_CONTAINER', 'host.docker.internal')
 
+        config['alerts']['enabled'] = False
         return config
 
     def run(self):
@@ -68,14 +70,24 @@ class RunTests:
             return
 
         try:
-            # AI analysis test class
-            test_ai_analysis = TestAIanalysis(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
-            test_ai_analysis.train_modules()
-            test_ai_analysis.predictions()
+            # AI backtest test class
+            backtest = TestAIBacktest(
+                ib=self.ib,
+                config={},
+                params=self.params,
+                stock_data_fetcher=self.stock_data_fetcher,
+                categorized_stocks=self.stock_fetcher.categorized_stocks,
+            )
+            backtest.run()
 
-            # 200 MA retest test class
-            test_bot = TestRetest200MA(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
-            test_bot.test_retest_200ma()
+            # AI analysis test class
+            # test_ai_analysis = TestAIanalysis(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
+            # test_ai_analysis.train_modules()
+            # test_ai_analysis.predictions()
+
+            # # 200 MA retest test class
+            # test_bot = TestRetest200MA(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
+            # test_bot.test_retest_200ma()
         except KeyboardInterrupt:
             self.logger.info('Bot stopped by user')
             self.alert_manager.alert_bot_stopped()

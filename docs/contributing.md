@@ -64,9 +64,10 @@ python -c "from tests.run_tests import RunTests; RunTests().run()"
 ### Test Files
 
 - `test_risk_manager.py` — Position sizing and risk calculation (unit tests, no IB needed)
+- `test_ai_enhancements.py` — LSTM, CNN, walk-forward, volatility labels, market features (unit tests, no IB needed)
 - `test_retest_200ma.py` — Strategy pattern detection (integration, needs IB)
 - `test_ai_analysis.py` — AI pipeline training and prediction (integration, needs IB)
-- `test_ai_backtest.py` — Walk-forward AI performance backtest (integration, needs IB)
+- `test_ai_backtest.py` — Per-sector walk-forward AI performance backtest (integration, needs IB)
 
 Test logs are written to `data/test_logs/`.
 
@@ -86,7 +87,7 @@ main.py
 Key design decisions:
 - **One IB instance** shared across all modules via dependency injection
 - **Config/params separation**: Connection settings in `config.json`, strategy parameters in `trading_params.json`
-- **Per-sector AI models**: Each sector gets its own RBM + CNN to avoid cross-sector noise
+- **Per-sector AI models**: Each sector gets its own LSTM (or CNN) to avoid cross-sector noise
 - **Bracket orders**: Every trade is a parent + stop loss + take profit, submitted atomically
 
 ## Pull Request Workflow

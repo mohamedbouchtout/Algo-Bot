@@ -2,6 +2,7 @@
 
 from strategy.ai_analysis.data_preparation.feature_builder import FeatureBuilder
 from strategy.ai_analysis.data_preparation.indicator_features import IndicatorFeatureExtractor
+from strategy.ai_analysis.data_preparation.market_features import MarketFeatureExtractor
 from strategy.ai_analysis.data_preparation.price_features import PriceFeatureExtractor
 from strategy.ai_analysis.data_preparation.volume_features import VolumeFeatureExtractor
 
@@ -9,5 +10,6 @@ __all__ = [
     'PriceFeatureExtractor',
     'VolumeFeatureExtractor',
     'IndicatorFeatureExtractor',
+    'MarketFeatureExtractor',
     'FeatureBuilder',
 ]
