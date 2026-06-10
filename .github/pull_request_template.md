@@ -2,23 +2,22 @@
 
 <!-- Describe the change in 1-3 sentences. -->
 
+Type here...
+
 ## Why?
 
 <!-- What problem does it solve or what feature does it add? Link to an issue if applicable. -->
 
-Closes #
+Type here...
 
 ## How to test
 
 <!-- Steps to verify this change works correctly. -->
 
-1. 
-2. 
-3. 
+1. Type here...
 
-## Checklist
+## Details
 
-- [ ] Code follows the project's style (PEP 8, type hints, logging instead of print)
-- [ ] Tested with paper trading account (if trading logic changed)
-- [ ] Updated documentation (if behavior or configuration changed)
-- [ ] No secrets or credentials committed
+<!-- Bullet point details of everything that this pr changes. -->
+
+- Type here...

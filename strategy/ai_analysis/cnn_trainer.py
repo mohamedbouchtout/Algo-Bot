@@ -29,7 +29,7 @@ class CNNTrainer:
         input_length: int,
         rbm_feature_dim: int = 0,
         num_classes: int = 3,
-        epochs: int = 20,
+        epochs: int = 100,
         batch_size: int = 64,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-4,

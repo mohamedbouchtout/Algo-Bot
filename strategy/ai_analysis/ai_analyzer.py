@@ -36,7 +36,7 @@ class AIAnalyzer:
         self,
         stock_data: StockDataFetcher,
         feature_builder: FeatureBuilder | None = None,
-        cnn_epochs: int = 20,
+        cnn_epochs: int = 100,
         params: dict | None = None,
         model_type: str = 'lstm',
         # Deprecated — kept for backward compat, ignored
