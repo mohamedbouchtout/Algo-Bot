@@ -97,6 +97,8 @@ class TestAIBacktest:
         """Look up VIX and SPY close for a given date."""
         if market_data.empty:
             return 20.0, 400.0
+        if date.tzinfo is not None:
+            date = date.tz_localize(None)
         mask = market_data.index <= date
         if not mask.any():
             return 20.0, 400.0
