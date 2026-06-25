@@ -31,9 +31,9 @@ class Scheduler:
         if now.weekday() >= 5 or schedule.empty:  # 5 = Saturday, 6 = Sunday
             return False
 
-        # Market hours: 9:30 AM - 4:00 PM EST
+        # Market hours to trade on: 9:30 AM - 3:30 PM EST
         market_open = time(9, 30)
-        market_close = time(16, 0)
+        market_close = time(15, 30)
         current_time = now.time()
 
         return market_open <= current_time < market_close

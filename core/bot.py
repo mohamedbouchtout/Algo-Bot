@@ -5,6 +5,7 @@ Coordinates all modules
 
 import json
 import os
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -161,33 +162,38 @@ class TradingBot:
                 market_open = scheduler.is_market_hours()
                 connected = connection_manager.ensure_connected()
 
-                if market_open and connected:
-                    self.logger.info('Market is open. Scanning for signals...')
+                try:
+                    if market_open and connected:
+                        self.logger.info('Market is open. Scanning for signals...')
 
-                    order_manager.scan_stocks(stock_fetcher.categorized_stocks)
-                    position_manager.monitor_positions()
-                    last_git_check = git_manager.git(last_git_check)
+                        order_manager.scan_stocks(stock_fetcher.categorized_stocks)
+                        position_manager.monitor_positions()
+                        last_git_check = git_manager.git(last_git_check)
 
-                    self.logger.info(f'Waiting {self.params["timing"]["scan_interval"]} seconds until next scan...')
-                    self.ib.sleep(self.params['timing']['scan_interval'])
+                        self.logger.info(f'Waiting {self.params["timing"]["scan_interval"]} seconds until next scan...')
+                        self.ib.sleep(self.params['timing']['scan_interval'])
 
-                elif market_open and not connected:
-                    self.logger.warning('Cannot connect to IB - will retry in 1 minute')
-                    last_git_check = git_manager.git(last_git_check)
-                    self.ib.sleep(60)
+                    elif market_open and not connected:
+                        self.logger.warning('Cannot connect to IB - will retry in 1 minute')
+                        last_git_check = git_manager.git(last_git_check)
+                        self.ib.sleep(60)
 
-                else:
-                    if not connected:
-                        self.logger.warning('Market is closed and IB disconnected. Next check in 10 minutes...')
                     else:
-                        self.logger.info('Market is closed. Next check in 10 minutes...')
+                        if not connected:
+                            self.logger.warning('Market is closed and IB disconnected. Next check in 10 minutes...')
+                        else:
+                            self.logger.info('Market is closed. Next check in 10 minutes...')
 
-                    last_git_check = git_manager.git(last_git_check)
+                        last_git_check = git_manager.git(last_git_check)
 
-                    if self.should_retrain(scheduler, retrain_trigger):
-                        self.train_modules(ai_analyzers, stock_fetcher, retrain_trigger)
+                        if self.should_retrain(scheduler, retrain_trigger):
+                            self.train_modules(ai_analyzers, stock_fetcher, retrain_trigger)
 
-                    self.ib.sleep(600)
+                        self.ib.sleep(600)
+                        
+                except (ConnectionError, OSError) as e:
+                    self.logger.warning(f'IB connection lost: {e}. Will reconnect on next loop in 60 seconds...')
+                    time.sleep(60)
 
         except KeyboardInterrupt:
             self.logger.info('Bot stopped by user')
