@@ -48,7 +48,7 @@ A machine learning pipeline that classifies each ticker as LONG, FLAT, or SHORT 
 
 ### Architecture
 
-```
+```text
 OHLCV bars (via yfinance)
     |
     v
@@ -100,7 +100,7 @@ All features are scale-free so different tickers can be pooled into a single tra
 
 Labels are generated from forward returns normalized by each stock's volatility:
 
-```
+```text
 adjusted_return = forward_return / ATR(14)%
 
 If adjusted_return > volatility_threshold  → LONG  (2)
@@ -180,7 +180,7 @@ print(f"Avg accuracy: {metrics['avg_accuracy']:.3f}")
 
 ### Backtesting
 
-The backtest (`tests/test_ai_backtest.py`) simulates live trading on historical data using the same per-sector model architecture:
+The backtest (`tests/legacy/test_ai_backtest.py`) simulates live trading on historical data using the same per-sector model architecture:
 
 1. Fetches historical data and splits into train/test periods (75/25)
 2. Trains one AI model per sector on the training period

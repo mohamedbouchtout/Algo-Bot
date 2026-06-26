@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mohamedbouchtout/Algo-Bot/actions/workflows/ci.yml/badge.svg)](https://github.com/mohamedbouchtout/Algo-Bot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
 An automated trading bot that scans S&P 500 and NASDAQ stocks for breakout and retest patterns using a 200-day moving average strategy, with an AI analysis pipeline (LSTM/CNN) for signal classification.
 
@@ -26,11 +26,20 @@ Outside market hours the bot sleeps, checks for code updates, and retrains AI mo
 ```bash
 git clone https://github.com/mohamedbouchtout/Algo-Bot.git
 cd Algo-Bot
-pip install -r requirements.txt
-python main.py
+./setup.sh        # Linux/Mac
+setup.bat          # Windows
 ```
 
-Requires Python 3.10+ and TWS or IB Gateway running with API enabled. See [Installation](docs/installation.md) for full setup instructions.
+The setup script will create a virtual environment, install dependencies, and walk you through configuring email alerts.
+
+Once setup is complete, start the bot with:
+
+```bash
+./run.sh           # Linux/Mac
+run.bat            # Windows
+```
+
+Requires Python 3.11+ and TWS or IB Gateway running with API enabled. See [Installation](docs/installation.md) for full setup instructions.
 
 ## Project Structure
 
