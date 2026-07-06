@@ -73,6 +73,8 @@ class TestAIBacktest:
         # Track recent predictions vs actuals for accuracy-based retraining
         self._recent_predictions: list[int] = []
         self._recent_actuals: list[int] = []
+        self._sector_last_retrain: dict[str, int] = {}
+        self._retrain_cooldown = 20
 
     def _fetch_market_history(self) -> pd.DataFrame:
         """Fetch VIX and SPY history for regime shift detection during backtest."""
@@ -217,10 +219,12 @@ class TestAIBacktest:
                     regime_shifted = self.retrain_trigger.check_regime_shift_from_bars(current_vix, current_spy)
                     accuracy_degraded = self.retrain_trigger.check_accuracy(self._recent_predictions, self._recent_actuals)
 
-                    if regime_shifted or accuracy_degraded:
+                    last_retrain = self._sector_last_retrain.get(sector, -self._retrain_cooldown)
+                    cooldown_ok = (day_offset - last_retrain) >= self._retrain_cooldown
+
+                    if (regime_shifted or accuracy_degraded) and cooldown_ok:
                         reason = 'regime shift' if regime_shifted else 'accuracy degradation'
                         logger.info(f'Mid-simulation retrain triggered ({reason}) at day {day_offset} for {sym}')
-                        # Retrain using all data up to current point
                         expanded_train = {
                             s: full_df.iloc[: train_len + day_offset].copy().reset_index(drop=True)
                             for s in sector_tickers.get(sector, [])
@@ -231,6 +235,7 @@ class TestAIBacktest:
                             sector_analyzers[sector] = new_analyzer
                             analyzer = new_analyzer
                             self.retrain_count += 1
+                            self._sector_last_retrain[sector] = day_offset
                             self.retrain_trigger.snapshot_from_bars(current_vix, current_spy)
                             self._recent_predictions.clear()
                             self._recent_actuals.clear()
@@ -244,10 +249,25 @@ class TestAIBacktest:
 
                 # Track prediction vs actual for accuracy monitoring
                 if current_idx + forward_horizon < len(full_df):
-                    actual_return = (full_df['close'].iloc[current_idx + forward_horizon] / full_df['close'].iloc[current_idx]) - 1.0
-                    if actual_return > 0.01:
+                    fb = analyzer.feature_builder
+                    close_now = full_df['close'].iloc[current_idx]
+                    actual_return = (full_df['close'].iloc[current_idx + forward_horizon] / close_now) - 1.0
+
+                    threshold = fb.label_threshold
+                    if fb.volatility_adjusted_labels:
+                        high = history_slice['high'].astype(float)
+                        low = history_slice['low'].astype(float)
+                        close_s = history_slice['close'].astype(float)
+                        tr = pd.concat([high - low, (high - close_s.shift(1)).abs(), (low - close_s.shift(1)).abs()], axis=1).max(axis=1)
+                        atr14 = tr.ewm(alpha=1.0 / 14, adjust=False, min_periods=14).mean().iloc[-1]
+                        atr_pct = atr14 / close_now
+                        if atr_pct > 0 and np.isfinite(atr_pct):
+                            actual_return = actual_return / atr_pct
+                        threshold = fb.volatility_threshold
+
+                    if actual_return > threshold:
                         actual_class = 2
-                    elif actual_return < -0.01:
+                    elif actual_return < -threshold:
                         actual_class = 0
                     else:
                         actual_class = 1
@@ -271,12 +291,13 @@ class TestAIBacktest:
         self._print_report(results)
         return results
 
-    def _train_sector_analyzer(self, sector: str, train_bars: dict[str, pd.DataFrame]) -> AIAnalyzer | None:
+    def _train_sector_analyzer(self, sector: str, train_bars: dict[str, pd.DataFrame], epochs: int = 100) -> AIAnalyzer | None:
         try:
             feature_builder = FeatureBuilder(window_size=10, n_bits=4)
             analyzer = AIAnalyzer(
                 stock_data=self.stock_data_fetcher,
                 feature_builder=feature_builder,
+                cnn_epochs=epochs,
                 params=self.params,
             )
 

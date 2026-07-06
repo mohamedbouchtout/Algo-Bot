@@ -104,7 +104,11 @@ class LSTMTrainer:
             lr=self.learning_rate,
             weight_decay=self.weight_decay,
         )
-        criterion = nn.CrossEntropyLoss()
+        counts = np.bincount(labels[:split], minlength=self.num_classes).astype(np.float32)
+        weights = 1.0 / np.maximum(counts, 1)
+        weights /= weights.sum()
+        class_weights = torch.tensor(weights, dtype=torch.float32).to(self.device)
+        criterion = nn.CrossEntropyLoss(weight=class_weights)
 
         best_val_loss = float('inf')
         best_state = None
