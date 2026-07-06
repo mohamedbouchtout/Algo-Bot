@@ -66,6 +66,8 @@ class FeatureBuilder:
 
         self.feature_names: list[str] = []
         self.bin_edges: dict[str, np.ndarray] = {}
+        self._feat_mean: np.ndarray | None = None
+        self._feat_std: np.ndarray | None = None
 
     def build_continuous_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Run every extractor on one ticker's bars and concat side-by-side."""
@@ -87,6 +89,11 @@ class FeatureBuilder:
         self.feature_names = list(pooled.columns)
         quantiles = np.linspace(0.0, 1.0, self.n_bits + 2)[1:-1]
         self.bin_edges = {col: np.quantile(pooled[col].values, quantiles) for col in self.feature_names}
+
+        self._feat_mean = pooled[self.feature_names].mean().values.astype(np.float32)
+        self._feat_std = pooled[self.feature_names].std().values.astype(np.float32)
+        self._feat_std[self._feat_std < 1e-8] = 1.0
+
         logger.info(f'FeatureBuilder fit: {len(self.feature_names)} features, {self.n_bits} bits/feature, pooled rows={len(pooled)}')
 
     def binarize(self, features: pd.DataFrame) -> np.ndarray:
@@ -141,7 +148,12 @@ class FeatureBuilder:
                 None if not include_labels else np.empty((0,), dtype=np.int64),
             )
 
-        cont = features[self.feature_names].values.astype(np.float32) if self.feature_names else features.values.astype(np.float32)
+        cont_raw = features[self.feature_names].values.astype(np.float32) if self.feature_names else features.values.astype(np.float32)
+
+        if self._feat_mean is not None and self._feat_std is not None:
+            cont = (cont_raw - self._feat_mean) / self._feat_std
+        else:
+            cont = cont_raw
 
         if include_rbm and self.bin_edges:
             bits = self.binarize(features)
@@ -167,7 +179,7 @@ class FeatureBuilder:
 
             if self.volatility_adjusted_labels and 'atr14_pct' in self.feature_names:
                 atr_col_idx = self.feature_names.index('atr14_pct')
-                atr_values = cont[end_idx, atr_col_idx]
+                atr_values = cont_raw[end_idx, atr_col_idx]
                 safe_atr = np.where(
                     (atr_values > 0) & np.isfinite(atr_values),
                     atr_values,
