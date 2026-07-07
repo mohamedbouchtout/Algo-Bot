@@ -190,7 +190,7 @@ class TradingBot:
                             self.train_modules(ai_analyzers, stock_fetcher, retrain_trigger)
 
                         self.ib.sleep(600)
-                        
+
                 except (ConnectionError, OSError) as e:
                     self.logger.warning(f'IB connection lost: {e}. Will reconnect on next loop in 60 seconds...')
                     time.sleep(60)

@@ -2,7 +2,7 @@
 Train AI models per sector and print predictions for every ticker.
 
 Usage:
-    python -m tests.run_predictions
+    python -m tests.legacy.run_predictions
 """
 
 import asyncio
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_json(filename):
-    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), filename)
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), filename)
     with open(path) as f:
         return json.load(f)
 
@@ -47,9 +47,12 @@ def main():
             logger.warning(f'Skipping {sector}: only {added} ticker(s)')
             continue
 
-        analyzer.finalize_training(val_split=0.2)
-        sector_analyzers[sector] = analyzer
-        logger.info(f'Trained {sector} model on {added} tickers')
+        try:
+            analyzer.finalize_training(val_split=0.2)
+            sector_analyzers[sector] = analyzer
+            logger.info(f'Trained {sector} model on {added} tickers')
+        except Exception as e:
+            logger.error(f'Training failed for {sector}: {e}')
 
     logger.info(f'Training complete: {len(sector_analyzers)} sector models')
 

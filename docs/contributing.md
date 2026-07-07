@@ -42,32 +42,56 @@ Run all checks locally before pushing (same checks that CI runs):
 nox
 ```
 
-This runs linting and unit tests. You can also run individual sessions:
+This runs linting, unit tests, and integration tests across Python 3.11–3.14. You can also run individual sessions:
 
 ```bash
-nox -s lint          # ruff linting + format check
-nox -s test          # pytest unit tests
-nox -s typecheck     # mypy type checking
-nox -s fix           # auto-fix lint errors and reformat code
+nox -s lint              # ruff linting + format check
+nox -s fix               # auto-fix lint errors and reformat code
+nox -s test              # unit tests on all Python versions (3.11–3.14)
+nox -s test-3.12         # unit tests on a specific Python version
+nox -s integration       # integration tests on all Python versions
+nox -s integration-3.12  # integration tests on a specific Python version
+nox -s typecheck         # mypy type checking
 ```
 
 Run `nox -s fix` before pushing to auto-format your code and fix lint errors.
 
-### Integration Tests
+### Test Structure
 
-The full integration test suite requires TWS or IB Gateway running:
+Tests are organized into subdirectories under `tests/`:
 
-```bash
-python -c "from tests.run_tests import RunTests; RunTests().run()"
+```text
+tests/
+├── conftest.py              # Shared fixtures (PARAMS, CONFIG, synthetic data helpers)
+├── unit/                    # Fast unit tests — no network or IB required
+│   ├── test_risk_manager.py # Position sizing, trade validation, stop loss
+│   ├── test_cnn.py          # CNN model, early stopping
+│   ├── test_lstm.py         # LSTM network and trainer
+│   ├── test_walk_forward.py # Walk-forward cross-validation splits
+│   ├── test_features.py     # Volatility-adjusted labels, market features
+│   └── test_retrain_trigger.py  # Regime shift and accuracy checks
+├── integration/             # End-to-end pipeline tests (some need network)
+│   ├── test_data_fetch.py       # yfinance data fetching
+│   ├── test_feature_pipeline.py # Full feature extraction chain
+│   ├── test_ai_pipeline.py      # Train + predict + walk-forward validation
+│   ├── test_strategy_200ma.py   # 200-MA pattern detection
+│   ├── test_signals.py          # Signal construction + risk sizing flow
+│   ├── test_retrain_trigger.py  # Retrain trigger with live data
+│   ├── test_scheduler.py        # Market hours checks
+│   └── test_end_to_end.py       # Full real-data pipeline
+└── legacy/                  # Old scripts (not collected by pytest)
 ```
 
-### Test Files
+**Unit tests** (`tests/unit/`) run without network access or IB and are selected by default with `nox -s test`.
 
-- `test_risk_manager.py` — Position sizing and risk calculation (unit tests, no IB needed)
-- `test_ai_enhancements.py` — LSTM, CNN, walk-forward, volatility labels, market features (unit tests, no IB needed)
-- `test_retest_200ma.py` — Strategy pattern detection (integration, needs IB)
-- `test_ai_analysis.py` — AI pipeline training and prediction (integration, needs IB)
-- `test_ai_backtest.py` — Per-sector walk-forward AI performance backtest (integration, needs IB)
+**Integration tests** (`tests/integration/`) exercise real pipelines end-to-end. Tests that hit yfinance are skipped gracefully when offline. Run them with `nox -s integration`.
+
+### Writing Tests
+
+- **Unit tests**: Place in `tests/unit/`. No special marker needed.
+- **Integration tests**: Place in `tests/integration/` and mark every class with `@pytest.mark.integration`.
+- Use `make_synthetic_bars()` and `PARAMS`/`CONFIG` from `tests/conftest.py` for shared test data.
+- Tests that need network access should use the `@requires_network` decorator from `tests/conftest.py`.
 
 Test logs are written to `data/test_logs/`.
 

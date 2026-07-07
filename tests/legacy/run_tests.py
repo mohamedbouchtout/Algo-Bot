@@ -11,9 +11,9 @@ from core.connection import ConnectionManager
 from data_fetch.historical_data import StockDataFetcher
 from data_fetch.stock_fetcher import StockTickerFetcher
 from execution.position_manager import PositionManager
-from tests.test_ai_analysis import TestAIanalysis
-from tests.test_ai_backtest import TestAIBacktest
-from tests.test_retest_200ma import TestRetest200MA
+from tests.legacy.test_ai_analysis import TestAIanalysis
+from tests.legacy.test_ai_backtest import TestAIBacktest
+from tests.legacy.test_retest_200ma import TestRetest200MA
 from utils.alerts import AlertManager
 from utils.logger import setup_logger
 
@@ -32,14 +32,14 @@ class RunTests:
 
     def load_params(self):
         """Load parameters from JSON file"""
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/trading_params.json')
+        file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config/trading_params.json')
         with open(file_path) as file:
             params = json.load(file)
         return params
 
     def load_config(self):
         """Load configuration from JSON file"""
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config/config.json')
+        file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config/config.json')
         with open(file_path) as file:
             config = json.load(file)
 

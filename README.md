@@ -55,7 +55,10 @@ Algo-Bot/
 │   └── ai_analysis/         # LSTM/CNN feature pipeline and prediction
 ├── ai_modules/              # LSTM and CNN model implementations (PyTorch)
 ├── utils/                   # Email alerts, git manager, logging
-├── tests/                   # Test suite
+├── tests/                   # Test suite (unit/, integration/, legacy/)
+│   ├── unit/                # Fast unit tests (no network or IB required)
+│   ├── integration/         # End-to-end pipeline tests (some need network)
+│   └── legacy/              # Legacy scripts (not collected by pytest)
 └── data/                    # Runtime logs, positions, stock lists (auto-created)
 ```
 
