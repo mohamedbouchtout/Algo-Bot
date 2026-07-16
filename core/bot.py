@@ -5,6 +5,7 @@ Coordinates all modules
 
 import json
 import os
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -17,6 +18,7 @@ from data_fetch.stock_fetcher import StockTickerFetcher
 from execution.order_manager import OrderManager
 from execution.position_manager import PositionManager
 from strategy.ai_analysis.ai_analyzer import AIAnalyzer
+from strategy.ai_analysis.retrain_trigger import RetrainTrigger
 from utils.alerts import AlertManager
 from utils.git_manager import GitManager
 from utils.logger import setup_logger
@@ -64,18 +66,30 @@ class TradingBot:
             params = json.load(file)
         return params
 
-    def should_retrain(self, scheduler: Scheduler) -> bool:
+    def should_retrain(self, scheduler: Scheduler, retrain_trigger: RetrainTrigger) -> bool:
+        """Check if AI models need retraining.
+
+        Triggers on:
+        1. Cold start (no model exists)
+        2. Regular schedule (weekly on weekends)
+        3. Market regime shift (VIX or SPY moved significantly since last train)
+        """
         # Cold start, no model exists, train regardless of day
         if self.last_train_time is None:
             return True
 
-        # Model exists, only refresh on weekends, and only if it's stale
+        # Regime shift triggers immediate retrain regardless of schedule
+        if retrain_trigger.check_regime_shift():
+            self.logger.info('Regime shift detected, triggering early retrain')
+            return True
+
+        # Regular schedule: only refresh on weekends, and only if stale
         if not scheduler.is_weekend():
             return False
         return datetime.now() - self.last_train_time >= self.TRAIN_INTERVAL
 
-    def train_modules(self, ai_analyzers: dict[str, AIAnalyzer], stock_fetcher: StockTickerFetcher):
-        """Run a full pooled retrain of the RBM + CNN on the current ticker universe."""
+    def train_modules(self, ai_analyzers: dict[str, AIAnalyzer], stock_fetcher: StockTickerFetcher, retrain_trigger: RetrainTrigger):
+        """Run a full pooled retrain of the AI models on the current ticker universe."""
         try:
             self.logger.info('Starting AI training...')
 
@@ -96,6 +110,7 @@ class TradingBot:
                 ai_analyzer.finalize_training(val_split=0.2)
 
             self.last_train_time = datetime.now()
+            retrain_trigger.snapshot_market()
             self.logger.info(f'AI training finished: {added} tickers')
         except Exception as e:
             self.logger.error(f'AI training failed; bot will continue with previous model: {e}')
@@ -113,6 +128,7 @@ class TradingBot:
         self.logger.info('Starting trading bot...')
 
         stock_fetcher = StockTickerFetcher()
+        retrain_trigger = RetrainTrigger()
         stock_data = StockDataFetcher(self.ib, self.config, self.params)
         scheduler = Scheduler()
         ai_analyzers = self.sectored_ai_objects(stock_data, stock_fetcher)
@@ -139,40 +155,45 @@ class TradingBot:
                 self.ib.sleep(60)
 
             # Cold-start training if no model exists
-            if self.should_retrain(scheduler):
-                self.train_modules(ai_analyzers, stock_fetcher)
+            if self.should_retrain(scheduler, retrain_trigger):
+                self.train_modules(ai_analyzers, stock_fetcher, retrain_trigger)
 
             while True:
                 market_open = scheduler.is_market_hours()
                 connected = connection_manager.ensure_connected()
 
-                if market_open and connected:
-                    self.logger.info('Market is open. Scanning for signals...')
+                try:
+                    if market_open and connected:
+                        self.logger.info('Market is open. Scanning for signals...')
 
-                    order_manager.scan_stocks(stock_fetcher.categorized_stocks)
-                    position_manager.monitor_positions()
-                    last_git_check = git_manager.git(last_git_check)
+                        order_manager.scan_stocks(stock_fetcher.categorized_stocks)
+                        position_manager.monitor_positions()
+                        last_git_check = git_manager.git(last_git_check)
 
-                    self.logger.info(f'Waiting {self.params["timing"]["scan_interval"]} seconds until next scan...')
-                    self.ib.sleep(self.params['timing']['scan_interval'])
+                        self.logger.info(f'Waiting {self.params["timing"]["scan_interval"]} seconds until next scan...')
+                        self.ib.sleep(self.params['timing']['scan_interval'])
 
-                elif market_open and not connected:
-                    self.logger.warning('Cannot connect to IB - will retry in 1 minute')
-                    last_git_check = git_manager.git(last_git_check)
-                    self.ib.sleep(60)
+                    elif market_open and not connected:
+                        self.logger.warning('Cannot connect to IB - will retry in 1 minute')
+                        last_git_check = git_manager.git(last_git_check)
+                        self.ib.sleep(60)
 
-                else:
-                    if not connected:
-                        self.logger.warning('Market is closed and IB disconnected. Next check in 10 minutes...')
                     else:
-                        self.logger.info('Market is closed. Next check in 10 minutes...')
+                        if not connected:
+                            self.logger.warning('Market is closed and IB disconnected. Next check in 10 minutes...')
+                        else:
+                            self.logger.info('Market is closed. Next check in 10 minutes...')
 
-                    last_git_check = git_manager.git(last_git_check)
+                        last_git_check = git_manager.git(last_git_check)
 
-                    if self.should_retrain(scheduler):
-                        self.train_modules(ai_analyzers, stock_fetcher)
+                        if self.should_retrain(scheduler, retrain_trigger):
+                            self.train_modules(ai_analyzers, stock_fetcher, retrain_trigger)
 
-                    self.ib.sleep(600)
+                        self.ib.sleep(600)
+
+                except (ConnectionError, OSError) as e:
+                    self.logger.warning(f'IB connection lost: {e}. Will reconnect on next loop in 60 seconds...')
+                    time.sleep(60)
 
         except KeyboardInterrupt:
             self.logger.info('Bot stopped by user')

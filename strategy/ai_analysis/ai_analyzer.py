@@ -4,32 +4,11 @@ High-level orchestrator for the AI analysis pipeline.
 Responsibilities
 ----------------
 * Pull historical data for a list of tickers via the existing StockDataFetcher.
-* Build a combined, binarised training set with FeatureBuilder.
-* Train the RBM on the full corpus (unsupervised).
-* Use the trained RBM to produce hidden features for every sample.
-* Train the CNN on (continuous window, RBM features) -> forward-return label.
+* Build a combined training set with FeatureBuilder.
+* Train the CNN on continuous windowed features -> forward-return label.
 * Expose `predict(symbol)` that pulls the latest bars and returns a LONG/FLAT/
-  SHORT classification plus class probabilities, this is the hook that
-  `order_manager.scan_stocks()` can eventually call.
-
-Two training styles are supported:
-
-1. Batch ::
-       analyzer.train(['AAPL', 'MSFT', ...])
-   Pulls every ticker, pools their windows, fits the models once.
-
-2. Incremental (one ticker per call) ::
-       for sym in tickers:
-           analyzer.add_ticker(sym)
-       analyzer.finalize_training()
-   Fits the same pooled models, but lets the caller drive the per-ticker
-   loop, useful when integrating with an existing scan loop and when you
-   want to skip / retry individual tickers.
-
-Both styles produce equivalent models; training a model on a single ticker
-in isolation is **not** recommended because the RBM/CNN need the pooled
-cross-ticker samples to learn general patterns rather than memorising one
-name.
+  SHORT classification plus class probabilities.
+* Optionally run walk-forward cross-validation to evaluate model quality.
 """
 
 import logging
@@ -37,13 +16,13 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
 
 from data_fetch.historical_data import StockDataFetcher
 from execution.risk_manager import RiskManager
 from strategy.ai_analysis.cnn_trainer import CNNTrainer
 from strategy.ai_analysis.data_preparation.feature_builder import FeatureBuilder
-from strategy.ai_analysis.rbm_trainer import RBMTrainer
+from strategy.ai_analysis.lstm_trainer import LSTMTrainer
+from strategy.ai_analysis.walk_forward import WalkForwardValidator
 
 logger = logging.getLogger(__name__)
 
@@ -51,34 +30,46 @@ logger = logging.getLogger(__name__)
 class AIAnalyzer:
     CLASS_NAMES = {0: 'SHORT', 1: 'FLAT', 2: 'LONG'}
 
+    VALID_MODEL_TYPES = ('cnn', 'lstm')
+
     def __init__(
         self,
         stock_data: StockDataFetcher,
         feature_builder: FeatureBuilder | None = None,
+        cnn_epochs: int = 100,
+        params: dict | None = None,
+        model_type: str = 'lstm',
+        # Deprecated — kept for backward compat, ignored
         rbm_hidden_dim: int = 64,
         rbm_epochs: int = 30,
-        cnn_epochs: int = 20,
-        params: dict | None = None,
     ):
+        if model_type not in self.VALID_MODEL_TYPES:
+            raise ValueError(f"model_type must be one of {self.VALID_MODEL_TYPES}, got '{model_type}'")
         self.stock_data = stock_data
         self.feature_builder = feature_builder or FeatureBuilder(window_size=10, n_bits=4)
-        self.rbm_trainer: RBMTrainer | None = None
-        self.cnn_trainer: CNNTrainer | None = None
-        self.rbm_epochs = rbm_epochs
+        self.model_type = model_type
+        self._trainer: CNNTrainer | LSTMTrainer | None = None
         self.cnn_epochs = cnn_epochs
-        self.rbm_hidden_dim = rbm_hidden_dim
         self.params = params or {}
 
-        # Cache raw bars per ticker so we don't hit IB twice when building the
-        # dataset and then the labelled samples.
         self._bar_cache: dict[str, pd.DataFrame] = {}
-
-        # Per-ticker continuous features accumulated across add_ticker() calls.
-        # These get concatenated into the bin-edges fit in finalize_training().
         self._continuous_per_ticker: list[pd.DataFrame] = []
         self._kept_tickers: list[str] = []
 
-    # =================================================================== data
+    def _create_trainer(self):
+        """Create the appropriate trainer (LSTM or CNN) based on model_type."""
+        fb = self.feature_builder
+        if self.model_type == 'lstm':
+            return LSTMTrainer(
+                n_features=len(fb.feature_names),
+                window_size=fb.window_size,
+                epochs=self.cnn_epochs,
+            )
+        return CNNTrainer(
+            input_length=fb.cnn_input_length,
+            epochs=self.cnn_epochs,
+        )
+
     def _get_bars(self, symbol: str) -> pd.DataFrame | None:
         if symbol in self._bar_cache:
             return self._bar_cache[symbol]
@@ -101,10 +92,7 @@ class AIAnalyzer:
         stores them for the next `finalize_training()` call. Does **not**
         train anything yet.
 
-        Returns
-        -------
-        True  if the ticker was added.
-        False if it was skipped (insufficient data / extraction error / already added).
+        Returns True if the ticker was added, False if skipped.
         """
         if symbol in self._kept_tickers:
             logger.debug(f'{symbol}: already in dataset, skipping')
@@ -126,53 +114,48 @@ class AIAnalyzer:
         logger.debug(f'Added {symbol} to dataset ({len(self._kept_tickers)} tickers accumulated)')
         return True
 
-    def build_dataset(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def build_dataset(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Assemble the pooled training tensors from whatever has been accumulated
-        via `add_ticker()`.
+        Assemble the pooled training tensors.
 
         Returns
         -------
-        rbm_x  : (N, visible_dim) uint8     binarised windows for the RBM
-        cnn_x  : (N, input_length) float32  continuous windows for the CNN
-        labels : (N,) int64                 0/1/2 target classes
-        ids    : (N,) int64                 per-sample ticker index for diagnostics.
+        cnn_x  : (N, input_length) float32
+        labels : (N,) int64
+        ids    : (N,) int64 per-sample ticker index
         """
         if not self._continuous_per_ticker:
             raise RuntimeError('No tickers in dataset, call add_ticker() (or train(tickers)) first')
 
         self.feature_builder.fit_bin_edges(self._continuous_per_ticker)
 
-        rbm_chunks, cnn_chunks, label_chunks, ticker_ids = [], [], [], []
+        cnn_chunks, label_chunks, ticker_ids = [], [], []
         for idx, sym in enumerate(self._kept_tickers):
             bars = self._bar_cache[sym]
-            rbm_x, cnn_x, labels = self.feature_builder.build_windows(bars, include_labels=True)
-            if len(rbm_x) == 0:
+            _, cnn_x, labels = self.feature_builder.build_windows(bars, include_labels=True, include_rbm=False)
+            if len(cnn_x) == 0:
                 continue
-            rbm_chunks.append(rbm_x)
             cnn_chunks.append(cnn_x)
             label_chunks.append(labels)
-            ticker_ids.append(np.full(len(rbm_x), idx, dtype=np.int64))
+            ticker_ids.append(np.full(len(cnn_x), idx, dtype=np.int64))
 
-        if not rbm_chunks:
+        if not cnn_chunks:
             raise RuntimeError('No tickers produced usable windowed samples')
 
-        rbm_all = np.concatenate(rbm_chunks, axis=0)
         cnn_all = np.concatenate(cnn_chunks, axis=0)
         labels_all = np.concatenate(label_chunks, axis=0)
         ids_all = np.concatenate(ticker_ids, axis=0)
 
         logger.info(
-            f'Dataset built: {len(rbm_all)} samples across {len(self._kept_tickers)} tickers '
-            f'(visible_dim={rbm_all.shape[1]}, cnn_len={cnn_all.shape[1]}, '
+            f'Dataset built: {len(cnn_all)} samples across {len(self._kept_tickers)} tickers '
+            f'(cnn_len={cnn_all.shape[1]}, '
             f'class counts={np.bincount(labels_all, minlength=3).tolist()})'
         )
-        return rbm_all, cnn_all, labels_all, ids_all
+        return cnn_all, labels_all, ids_all
 
-    # ================================================================== train
     def finalize_training(self, val_split: float = 0.2) -> None:
         """
-        Fit the RBM and CNN on everything accumulated via `add_ticker()`.
+        Fit the model on everything accumulated via `add_ticker()`.
         Training on a single ticker is technically allowed but strongly
         discouraged (models will just memorise that ticker).
         """
@@ -181,27 +164,10 @@ class AIAnalyzer:
                 f'finalize_training() called with only {len(self._kept_tickers)} ticker(s); pooled training needs several tickers to generalise.'
             )
 
-        rbm_x, cnn_x, labels, _ = self.build_dataset()
+        cnn_x, labels, _ = self.build_dataset()
 
-        split = int(len(rbm_x) * (1.0 - val_split))
-        x_train, x_test = rbm_x[:split], rbm_x[split:]
-
-        # --- RBM ---------------------------------------------------------
-        self.rbm_trainer = RBMTrainer(
-            visible_dim=self.feature_builder.visible_dim,
-            hidden_dim=self.rbm_hidden_dim,
-            epochs=self.rbm_epochs,
-        )
-        self.rbm_trainer.train(x_train, x_test)
-
-        # --- CNN ---------------------------------------------------------
-        rbm_feats = self.rbm_trainer.hidden_features(rbm_x)
-        self.cnn_trainer = CNNTrainer(
-            input_length=self.feature_builder.cnn_input_length,
-            rbm_feature_dim=self.rbm_hidden_dim,
-            epochs=self.cnn_epochs,
-        )
-        self.cnn_trainer.train(cnn_x, rbm_feats, labels, val_split=val_split)
+        self._trainer = self._create_trainer()
+        self._trainer.train(cnn_x, labels, val_split=val_split)
 
     def train(self, tickers: list[str], val_split: float = 0.2) -> None:
         """
@@ -213,28 +179,67 @@ class AIAnalyzer:
             self.add_ticker(sym)
         self.finalize_training(val_split=val_split)
 
-    # ================================================================ predict
+    def walk_forward_train(self, n_splits: int = 5) -> dict:
+        """
+        Run walk-forward cross-validation and train a final model.
+
+        Returns per-fold metrics and averages. The final model (trained on
+        all data) is stored in self._trainer so predict() works.
+        """
+        cnn_x, labels, _ = self.build_dataset()
+        validator = WalkForwardValidator(n_splits=n_splits)
+        splits = validator.split(len(cnn_x))
+
+        fold_metrics = []
+        for fold_idx, (train_idx, val_idx) in enumerate(splits):
+            trainer = self._create_trainer()
+            train_x, train_y = cnn_x[train_idx], labels[train_idx]
+            val_x, val_y = cnn_x[val_idx], labels[val_idx]
+
+            trainer.train(train_x, train_y, val_split=0.0)
+
+            preds, probs = trainer.predict(val_x)
+            accuracy = (preds == val_y).mean()
+            fold_metrics.append(
+                {
+                    'fold': fold_idx,
+                    'train_size': len(train_idx),
+                    'val_size': len(val_idx),
+                    'accuracy': float(accuracy),
+                }
+            )
+            logger.info(f'Walk-forward fold {fold_idx}: train={len(train_idx)}, val={len(val_idx)}, acc={accuracy:.3f}')
+
+        avg_acc = np.mean([m['accuracy'] for m in fold_metrics])
+        logger.info(f'Walk-forward avg accuracy: {avg_acc:.3f}')
+
+        self._trainer = self._create_trainer()
+        self._trainer.train(cnn_x, labels, val_split=0.1)
+
+        return {
+            'folds': fold_metrics,
+            'avg_accuracy': float(avg_acc),
+            'total_samples': len(cnn_x),
+        }
+
     def predict(self, symbol: str) -> dict | None:
         """
         Fetch the latest bars for `symbol`, build the most recent window and
-        classify it.  Returns None if anything is missing / not trained.
+        classify it. Returns None if anything is missing / not trained.
         """
-        if self.rbm_trainer is None or self.cnn_trainer is None:
+        if self._trainer is None:
             raise RuntimeError('Call train() or finalize_training() before predict()')
 
         df = self.stock_data.get_historical_data(symbol, self.params['ai_analyzer']['lookback_days'])
         if df is None or len(df) < 250:
             return None
 
-        rbm_x, cnn_x, _ = self.feature_builder.build_windows(df, include_labels=False)
-        if len(rbm_x) == 0:
+        _, cnn_x, _ = self.feature_builder.build_windows(df, include_labels=False, include_rbm=False)
+        if len(cnn_x) == 0:
             return None
 
-        # Use only the most recent window
-        rbm_last = rbm_x[-1:]
         cnn_last = cnn_x[-1:]
-        rbm_feats = self.rbm_trainer.hidden_features(rbm_last)
-        preds, probs = self.cnn_trainer.predict(cnn_last, rbm_feats)
+        preds, probs = self._trainer.predict(cnn_last)
 
         cls = int(preds[0])
         return {
@@ -264,7 +269,6 @@ class AIAnalyzer:
             risk = stop_loss - entry_price
             target_price = entry_price - (risk * params['ai_analyzer']['risk_reward_ratio'])
 
-        # Format prices based on price level
         if entry_price < 1:
             entry_price = round(entry_price, 4)
             target_price = round(target_price, 4)

@@ -2,19 +2,33 @@
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.11+
 - Interactive Brokers account (paper trading recommended for testing)
 - TWS (Trader Workstation) or IB Gateway installed and running
 
-## 1. Clone and Install
+## 1. Clone and Setup
 
 ```bash
 git clone https://github.com/mohamedbouchtout/Algo-Bot.git
 cd Algo-Bot
-pip install -r requirements.txt
+./setup.sh        # Linux/Mac
+setup.bat          # Windows
 ```
 
-`requirements.txt` includes AI pipeline dependencies (TensorFlow, PyTorch, scikit-learn). If you don't plan to use the AI pipeline, you can comment out those lines — the core bot doesn't import them.
+The setup script will:
+1. Verify Python 3.11+ is installed
+2. Create a virtual environment (`.venv`)
+3. Install all dependencies from `requirements.txt`
+4. Optionally configure email alerts (Gmail credentials + recipient email)
+
+If you prefer to set up manually:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate       # Linux/Mac
+# .venv\Scripts\activate.bat    # Windows
+pip install -r requirements.txt
+```
 
 ## 2. Set Up Interactive Brokers
 
@@ -40,7 +54,9 @@ Visit [interactivebrokers.com](https://www.interactivebrokers.com/) and download
 
 ## 3. Email Alerts (Optional)
 
-To receive email notifications for trades, errors, and daily summaries, create a `.env` file in the project root:
+If you ran the setup script and chose to configure email alerts, this is already done. Otherwise, follow the steps below.
+
+Create a `.env` file in the project root (see `.env.example` for a template):
 
 ```
 GMAIL_USER=your-gmail@gmail.com
@@ -67,6 +83,16 @@ Then enable alerts in `config/config.json`:
 ## 4. Run the Bot
 
 ```bash
+./run.sh           # Linux/Mac
+run.bat            # Windows
+```
+
+Or manually:
+
+```bash
+source .venv/bin/activate          # Linux/Mac
+# .venv\Scripts\activate.bat       # Windows CMD
+# .venv\Scripts\Activate.ps1       # Windows PowerShell
 python main.py
 ```
 

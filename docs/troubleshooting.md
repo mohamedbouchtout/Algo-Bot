@@ -59,28 +59,36 @@ IB drops idle connections. The bot automatically reconnects when this happens. I
 
 ## AI Pipeline Issues
 
-### ModuleNotFoundError for tensorflow / torch / deepdish
+### ModuleNotFoundError for torch
 
-- Install AI dependencies: `pip install -r requirements.txt`
-- These are only needed if you use the AI analysis pipeline; the core bot doesn't import them
+- Install dependencies: `pip install -r requirements.txt`
+- PyTorch is required for the AI analysis pipeline (LSTM and CNN models)
 
 ### "No tickers produced usable features"
 
 - Each ticker needs at least ~220 bars of history before the 200-day MA features are valid
 - Increase `lookback_days` in `trading_params.json` (the AI analyzer defaults to 2000)
 
-### RuntimeError: "x_train must be (N, visible_dim)"
+### "Failed to fetch market data"
 
-- The RBM's `visible_dim` must equal `window_size x n_features x n_bits`
-- If using custom extractors, pass them all to `FeatureBuilder(extractors=[...])`
+- The `MarketFeatureExtractor` fetches VIX and SPY data via yfinance on startup
+- If it fails (network issue), it falls back to neutral defaults — predictions still work but without market regime context
+- This is a warning, not an error
 
-### CNN validation accuracy stuck around 33%
+### Validation accuracy stuck around 33%
 
 - Class imbalance — most samples are FLAT
+- Volatility-adjusted labels (default) usually produce more balanced classes than fixed thresholds
+- Try adjusting `volatility_threshold` in `FeatureBuilder` (lower = more LONG/SHORT labels)
 - Check the `class counts=[...]` log line during `build_dataset()`
-- Tune `label_threshold` (try 0.005 or 0.02) and `forward_horizon`
 
-### results/ directory filling up with .h5 files
+### Early stopping triggers immediately
 
-- The RBM saves a model snapshot every epoch by design
-- Clear the directory between training runs, or run training in a dedicated working directory
+- Validation set may be too small — increase `lookback_days` to get more training samples
+- Try increasing `patience` (default 5) in the trainer
+
+### Switching between LSTM and CNN
+
+- Set `model_type='cnn'` or `model_type='lstm'` when creating `AIAnalyzer`
+- Default is `'lstm'` — LSTM generally performs better on sequential financial data
+- Both models use the same features and labels, so results are directly comparable

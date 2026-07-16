@@ -124,6 +124,8 @@ The bot runs on the `main` branch. It checks for remote updates on startup and o
 | `confidence_threshold` | Minimum softmax probability to act on a prediction |
 | `lookback_days` | Historical bars to fetch for AI training/prediction |
 
+The AI pipeline uses an LSTM model by default (switchable to CNN via `model_type`). Labels are volatility-adjusted using ATR, and training includes early stopping with best-weight restore. Each sector trains its own model. See [Strategies](strategies.md) for full details.
+
 ### Risk Management
 
 ```json

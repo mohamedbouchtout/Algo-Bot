@@ -30,7 +30,10 @@ class TestRetest200MA:
         try:
             for ticker in self.stock_fetcher.stock_list:
                 logger.info(f'Testing {ticker}...')
-                df = self.stock_data_fetcher.get_historical_data(ticker)
+                df = self.stock_data_fetcher.get_historical_data(ticker, self.params['ai_analyzer']['lookback_days'])
+                if df is None:
+                    logger.info(f'No data for {ticker}, skipping.')
+                    continue
 
                 indicator_200ma = TrendIndicator(df, self.config, self.params)
                 signal = indicator_200ma.detect_breakout_and_retest()

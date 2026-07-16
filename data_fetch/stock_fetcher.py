@@ -118,7 +118,7 @@ class StockTickerFetcher:
 
     def categorize_stocks(self) -> dict:
         """Categorize stocks by sector and industry for better AI training"""
-        categorized = {}
+        categorized: dict[str, dict[str, list[str]]] = {}
 
         for ticker in self.stock_list:
             try:

@@ -24,7 +24,7 @@ class TestAIanalysis:
         self.stock_data_fetcher = stock_data_fetcher
         self.stock_fetcher = stock_fetcher
         self.connection_manager = connection_manager
-        self.ai_analyzer = AIAnalyzer(self.stock_data_fetcher)
+        self.ai_analyzer = AIAnalyzer(self.stock_data_fetcher, params=self.params)
 
     def train_modules(self):
         """Run a full pooled retrain of the RBM + CNN on the current ticker universe."""
@@ -48,14 +48,14 @@ class TestAIanalysis:
 
     def predictions(self):
         """Prints the predictions for each stock from the training"""
-        try:
-            logger.info('Starting AI predictions...')
-            for ticker in self.stock_fetcher.stock_list:
+        logger.info('Starting AI predictions...')
+        for ticker in self.stock_fetcher.stock_list:
+            try:
                 result = self.ai_analyzer.predict(ticker)
 
                 if result is not None:
                     logger.info(pprint.pformat(result, indent=4))
+            except Exception as e:
+                logger.error(f'AI prediction failed for {ticker}: {e}')
 
-            logger.info('AI predictions finished')
-        except Exception as e:
-            logger.error(f'AI prediction failed: {e}')
+        logger.info('AI predictions finished')

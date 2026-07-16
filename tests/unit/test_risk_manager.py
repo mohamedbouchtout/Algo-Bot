@@ -7,18 +7,7 @@ import pandas as pd
 import pytest
 
 from execution.risk_manager import RiskManager
-
-PARAMS = {
-    'strategy_retest_200ma': {
-        'ATR': 1.5,
-    },
-    'risk_management': {
-        'risk_per_trade_pct': 0.03,
-        'max_investment_pct': 0.70,
-        'max_positions': 10,
-        'max_position_pct': 0.20,
-    },
-}
+from tests.conftest import PARAMS
 
 
 @pytest.fixture
@@ -28,18 +17,10 @@ def rm():
 
 class TestCalculatePositionSize:
     def test_basic_sizing(self, rm):
-        # $100k account, entry $50, stop $48 -> $2 risk per share
-        # risk budget = 100000 * 0.03 = $3000, shares = 3000 / 2 = 1500
-        # max cost cap = 100000 * 0.20 = $20000, shares by cost = 20000 / 50 = 400
-        # min(1500, 400) = 400
         shares = rm.calculate_position_size(100_000, 50.0, 48.0)
         assert shares == 400
 
     def test_risk_limited(self, rm):
-        # $100k account, entry $10, stop $9 -> $1 risk per share
-        # risk budget = $3000, shares = 3000
-        # max cost cap = $20000, shares by cost = 2000
-        # min(3000, 2000) = 2000
         shares = rm.calculate_position_size(100_000, 10.0, 9.0)
         assert shares == 2000
 
@@ -53,9 +34,6 @@ class TestCalculatePositionSize:
         assert rm.calculate_position_size(100_000, 50.0, 50.0) == 0
 
     def test_small_account(self, rm):
-        # $1000 account, entry $100, stop $95 -> $5 risk
-        # risk budget = $30, shares = 6
-        # max cost cap = $200, shares by cost = 2
         shares = rm.calculate_position_size(1_000, 100.0, 95.0)
         assert shares == 2
 
@@ -63,9 +41,6 @@ class TestCalculatePositionSize:
         assert rm.calculate_position_size(100_000, -10.0, 48.0) == 0
 
     def test_short_position_sizing(self, rm):
-        # Short: entry $50, stop $53 -> $3 risk per share
-        # risk budget = $3000, shares = 1000
-        # max cost cap = $20000, shares by cost = 400
         shares = rm.calculate_position_size(100_000, 50.0, 53.0)
         assert shares == 400
 
@@ -75,7 +50,6 @@ class TestCanTakeTrade:
         assert rm.can_take_trade(100_000, 50_000, 5) is True
 
     def test_max_investment_reached(self, rm):
-        # invested >= 70% of account
         assert rm.can_take_trade(100_000, 70_000, 5) is False
 
     def test_max_positions_reached(self, rm):
@@ -138,7 +112,6 @@ class TestGetStopLossPct:
         mock_yf.Ticker.side_effect = Exception('network error')
         df = self._make_df()
         sl = rm.get_stop_loss_pct(df)
-        # Should default to VIX=20 (normal range)
         last_range = (df['high'].iloc[-1] - df['low'].iloc[-1]) / df['close'].iloc[-1]
         expected = last_range * PARAMS['strategy_retest_200ma']['ATR']
         assert abs(sl - expected) < 1e-6

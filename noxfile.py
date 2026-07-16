@@ -1,6 +1,6 @@
 import nox
 
-nox.options.sessions = ['lint', 'test']
+nox.options.sessions = ['lint', 'test', 'integration']
 nox.options.reuse_existing_virtualenvs = True
 
 
@@ -41,22 +41,27 @@ def typecheck(session):
     )
 
 
-@nox.session
+@nox.session(python=['3.11', '3.12', '3.13', '3.14'])
 def test(session):
-    """Run pytest unit tests."""
-    session.install(
-        'pytest',
-        'pytest-cov',
-        'pandas',
-        'numpy',
-        'yfinance',
-    )
+    """Run pytest unit tests across Python 3.11+."""
+    session.install('-r', 'requirements.txt')
     session.run(
         'pytest',
-        'tests/',
+        'tests/unit/',
         '-v',
         '--tb=short',
-        '-m',
-        'not integration',
+        *session.posargs,
+    )
+
+
+@nox.session(python=['3.11', '3.12', '3.13', '3.14'])
+def integration(session):
+    """Run integration tests across Python 3.11+."""
+    session.install('-r', 'requirements.txt')
+    session.run(
+        'pytest',
+        'tests/integration/',
+        '-v',
+        '--tb=short',
         *session.posargs,
     )

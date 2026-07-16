@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/mohamedbouchtout/Algo-Bot/actions/workflows/ci.yml/badge.svg)](https://github.com/mohamedbouchtout/Algo-Bot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-An automated trading bot that scans S&P 500 and NASDAQ stocks for breakout and retest patterns using a 200-day moving average strategy, with an optional AI analysis pipeline (RBM + CNN) for signal confirmation.
+An automated trading bot that scans S&P 500 and NASDAQ stocks for breakout and retest patterns using a 200-day moving average strategy, with an AI analysis pipeline (LSTM/CNN) for signal classification.
 
 Built for Interactive Brokers (IBKR) with bracket orders, risk management, email alerts, and auto-updates.
 
@@ -14,7 +14,7 @@ The bot runs a continuous loop during NYSE market hours:
 
 1. **Scans** 500+ stocks for 200 MA breakout/retest patterns
 2. **Validates** signals with volume, trend direction, and bounce confirmation
-3. **Optionally confirms** with an AI model trained on price/volume/indicator features
+3. **Classifies** with an LSTM model trained on price, volume, indicator, and market regime features
 4. **Sizes positions** based on per-trade risk and account equity
 5. **Places bracket orders** (entry + stop loss + take profit) through IBKR
 6. **Monitors** open positions and sends email alerts on entry/exit
@@ -26,11 +26,20 @@ Outside market hours the bot sleeps, checks for code updates, and retrains AI mo
 ```bash
 git clone https://github.com/mohamedbouchtout/Algo-Bot.git
 cd Algo-Bot
-pip install -r requirements.txt
-python main.py
+./setup.sh        # Linux/Mac
+setup.bat          # Windows
 ```
 
-Requires Python 3.10+ and TWS or IB Gateway running with API enabled. See [Installation](docs/installation.md) for full setup instructions.
+The setup script will create a virtual environment, install dependencies, and walk you through configuring email alerts.
+
+Once setup is complete, start the bot with:
+
+```bash
+./run.sh           # Linux/Mac
+run.bat            # Windows
+```
+
+Requires Python 3.11+ and TWS or IB Gateway running with API enabled. See [Installation](docs/installation.md) for full setup instructions.
 
 ## Project Structure
 
@@ -43,10 +52,13 @@ Algo-Bot/
 ├── execution/               # Order placement, position tracking, risk management
 ├── strategy/
 │   ├── retest_200ma/        # 200 MA breakout/retest pattern detection
-│   └── ai_analysis/         # RBM + CNN feature pipeline and prediction
-├── ai_modules/              # Low-level RBM (TensorFlow) and CNN (PyTorch) implementations
+│   └── ai_analysis/         # LSTM/CNN feature pipeline and prediction
+├── ai_modules/              # LSTM and CNN model implementations (PyTorch)
 ├── utils/                   # Email alerts, git manager, logging
-├── tests/                   # Test suite
+├── tests/                   # Test suite (unit/, integration/, legacy/)
+│   ├── unit/                # Fast unit tests (no network or IB required)
+│   ├── integration/         # End-to-end pipeline tests (some need network)
+│   └── legacy/              # Legacy scripts (not collected by pytest)
 └── data/                    # Runtime logs, positions, stock lists (auto-created)
 ```
 
