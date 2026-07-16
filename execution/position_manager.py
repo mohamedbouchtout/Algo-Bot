@@ -19,7 +19,7 @@ class PositionManager:
     def __init__(self, ib, alert_manager: AlertManager, config, params):
         self.ib = ib
         self.file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'positions.json')
-        self.active_positions = {}
+        self.active_positions: dict[str, dict] = {}
         self.config = config
         self.params = params
         self.alert_manager = alert_manager

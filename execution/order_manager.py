@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from typing import Dict
 
-from ib_insync import *
+from ib_insync import LimitOrder, MarketOrder, Stock, StopOrder
 
 from data_fetch.historical_data import StockDataFetcher
 from execution.position_manager import PositionManager
@@ -102,8 +102,8 @@ class OrderManager:
         """Execute trading signals"""
         # Get account info to determine position sizing
         account_summary = self.ib.accountSummary()
-        net_liq = 0
-        cash_balance = 0
+        net_liq = 0.0
+        cash_balance = 0.0
 
         for item in account_summary:
             if item.tag == 'NetLiquidation':

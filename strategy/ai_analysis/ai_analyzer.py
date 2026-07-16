@@ -48,7 +48,7 @@ class AIAnalyzer:
         self.stock_data = stock_data
         self.feature_builder = feature_builder or FeatureBuilder(window_size=10, n_bits=4)
         self.model_type = model_type
-        self._trainer = None
+        self._trainer: CNNTrainer | LSTMTrainer | None = None
         self.cnn_epochs = cnn_epochs
         self.params = params or {}
 
