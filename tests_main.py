@@ -2,7 +2,7 @@
 Main for running all the tests
 """
 
-from tests.run_tests import RunTests
+from tests.legacy.run_tests import RunTests
 
 
 def main():

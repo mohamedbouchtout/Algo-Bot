@@ -17,7 +17,7 @@
         "ATR": 1.5
     },
     "ai_analyzer": {
-        "confidence_threshold": 0.75,
+        "confidence_threshold": 0.78,
         "risk_reward_ratio": 2.0,
         "stop_loss_pct": 0.03,
         "lookback_days": 1825,
