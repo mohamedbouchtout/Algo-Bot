@@ -147,46 +147,71 @@ class OrderManager:
         else:
             logger.warning(f'Position size too small for {signal["symbol"]}')
 
+    def _recalculate_bracket_prices(self, signal: dict, fill_price: float) -> tuple[float, float]:
+        """Recalculate stop/target relative to the actual fill price.
+
+        The signal's stop and target were computed from yesterday's close.
+        This preserves the same percentage distances so the risk/reward
+        ratio stays intact regardless of overnight gaps or intraday drift.
+        """
+        original_entry = signal['entry']
+        if original_entry <= 0:
+            return signal['stop'], signal['target']
+
+        if signal['type'] == 'LONG':
+            stop_pct = (original_entry - signal['stop']) / original_entry
+            target_pct = (signal['target'] - original_entry) / original_entry
+            new_stop = fill_price * (1 - stop_pct)
+            new_target = fill_price * (1 + target_pct)
+        else:
+            stop_pct = (signal['stop'] - original_entry) / original_entry
+            target_pct = (original_entry - signal['target']) / original_entry
+            new_stop = fill_price * (1 + stop_pct)
+            new_target = fill_price * (1 - target_pct)
+
+        if fill_price < 1:
+            return round(new_stop, 4), round(new_target, 4)
+        return round(new_stop, 2), round(new_target, 2)
+
     def place_order(self, signal: dict, shares: int):
-        """Place order based on signal, waiting for the entry to actually fill
-        before persisting the position or alerting the user."""
+        """Check the live price against the signal entry, then place a market
+        order and attach bracket children using the actual fill price."""
         try:
             symbol = signal['symbol']
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
 
-            # MARKET parent ensures we actually get filled. Children stay as the
-            # stop/target prices from the signal.
+            # Check live price before risking any capital.
+            # Max allowed deviation scales with the signal's stop distance
+            # (already VIX/volatility-adjusted), so volatile stocks get more
+            # room and stable stocks get a tighter leash.
+            stop_distance_pct = abs(signal['entry'] - signal['stop']) / signal['entry'] if signal['entry'] > 0 else 0
+            max_deviation = max(stop_distance_pct, 0.005)
+
+            [ticker] = self.ib.reqTickers(contract)
+            self.ib.sleep(0.5)
+            live_price = ticker.marketPrice()
+
+            if live_price is None or live_price != live_price or live_price <= 0:
+                logger.warning(f'{symbol} could not get a live quote, skipping trade.')
+                return
+
+            deviation = abs(live_price - signal['entry']) / signal['entry'] if signal['entry'] > 0 else 0
+            if deviation > max_deviation:
+                logger.warning(
+                    f'{symbol} live price ${live_price:.2f} deviated {deviation:.1%} from signal entry '
+                    f'${signal["entry"]:.2f} (max {max_deviation:.1%} based on stop distance). Skipping trade.'
+                )
+                return
+
             action = 'BUY' if signal['type'] == 'LONG' else 'SELL'
-            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False, transmit=False)
+
+            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False, transmit=True)
             parent_trade = self.ib.placeOrder(contract, parent)
 
-            take_profit = LimitOrder(
-                'SELL' if action == 'BUY' else 'BUY',
-                shares,
-                signal['target'],
-                tif='GTC',
-                outsideRth=True,
-                parentId=parent_trade.order.orderId,  # filled in below
-                transmit=False,
-            )
-            stop_loss = StopOrder(
-                'SELL' if action == 'BUY' else 'BUY',
-                shares,
-                signal['stop'],
-                tif='GTC',
-                outsideRth=True,
-                parentId=parent_trade.order.orderId,
-                transmit=True,  # last child triggers all three
-            )
-
-            # Submit children orders
-            tp_trade = self.ib.placeOrder(contract, take_profit)
-            sl_trade = self.ib.placeOrder(contract, stop_loss)
-
-            # Wait up to 600 s for the parent to fill.  Yields to the event loop.
+            statuses = ['Filled', 'Cancelled', 'ApiCancelled', 'Inactive']
             deadline = time.time() + 600
-            while parent_trade.orderStatus.status not in ('Filled', 'Cancelled', 'ApiCancelled', 'Inactive'):
+            while parent_trade.orderStatus.status not in statuses:
                 self.ib.waitOnUpdate(timeout=1)
                 if time.time() > deadline:
                     break
@@ -195,29 +220,85 @@ class OrderManager:
             status = parent_trade.orderStatus.status
             fill_price = parent_trade.orderStatus.avgFillPrice
             if status != 'Filled' or fill_price <= 0:
-                logger.warning(f'{symbol} parent order did NOT fill (status={status}). Cancelling bracket and skipping persistence.')
+                logger.warning(f'{symbol} parent order did NOT fill (status={status}). Cancelling and skipping persistence.')
+                try:
+                    self.ib.cancelOrder(parent_trade.order)
+                except Exception as cancel_err:
+                    logger.error(f'Failed to cancel order: {cancel_err}')
+
+                if filled_qty > 0:
+                    logger.warning(f'{symbol} partial fill of {filled_qty} shares at ${fill_price:.2f}. Closing out.')
+                    try:
+                        close_action = 'SELL' if action == 'BUY' else 'BUY'
+                        close_order = MarketOrder(close_action, filled_qty, tif='DAY', transmit=True)
+                        self.ib.placeOrder(contract, close_order)
+                    except Exception as cancel_err:
+                        logger.error(f'Failed to close partial fill: {cancel_err}')
+
+                return
+
+            # Recalculate stop/target from the actual fill price
+            new_stop, new_target = self._recalculate_bracket_prices(signal, fill_price)
+
+            logger.info(
+                f'{symbol} filled @ ${fill_price:.2f} (signal entry ${signal["entry"]:.2f}). Stop: ${new_stop:.2f}, Target: ${new_target:.2f}'
+            )
+
+            signal['entry'] = float(fill_price)
+            signal['stop'] = new_stop
+            signal['target'] = new_target
+            signal['risk'] = abs(fill_price - new_stop)
+            signal['reward'] = abs(new_target - fill_price)
+
+            child_action = 'SELL' if action == 'BUY' else 'BUY'
+            take_profit = LimitOrder(
+                child_action,
+                shares,
+                new_target,
+                tif='GTC',
+                outsideRth=True,
+                parentId=parent_trade.order.orderId,
+                transmit=False,
+            )
+            stop_loss = StopOrder(
+                child_action,
+                shares,
+                new_stop,
+                tif='GTC',
+                outsideRth=True,
+                parentId=parent_trade.order.orderId,
+                transmit=True,
+            )
+
+            tp_trade = self.ib.placeOrder(contract, take_profit)
+            sl_trade = self.ib.placeOrder(contract, stop_loss)
+
+            deadline = time.time() + 600
+            while tp_trade.orderStatus.status not in statuses or sl_trade.orderStatus.status not in statuses:
+                self.ib.waitOnUpdate(timeout=1)
+                if time.time() > deadline:
+                    break
+
+            filled_qty = parent_trade.orderStatus.filled
+            status = parent_trade.orderStatus.status
+            fill_price = parent_trade.orderStatus.avgFillPrice
+            if status != 'Filled' or fill_price <= 0:
+                logger.warning(f'{symbol} parent order did NOT fill (status={status}). Cancelling and skipping persistence.')
                 for trade in [parent_trade, tp_trade, sl_trade]:
                     try:
                         self.ib.cancelOrder(trade.order)
                     except Exception as cancel_err:
                         logger.error(f'Failed to cancel order: {cancel_err}')
 
-                # Close out any partial filled orders
                 if filled_qty > 0:
-                    logger.warning(
-                        f'{symbol} partial fill of {filled_qty} shares at ${fill_price:.2f}. Attempting to cancel remaining and skip persistence.'
-                    )
+                    logger.warning(f'{symbol} partial fill of {filled_qty} shares at ${fill_price:.2f}. Closing out.')
                     try:
                         close_action = 'SELL' if action == 'BUY' else 'BUY'
                         close_order = MarketOrder(close_action, filled_qty, tif='DAY', transmit=True)
                         self.ib.placeOrder(contract, close_order)
                     except Exception as cancel_err:
-                        logger.error(f'Failed to cancel remaining order: {cancel_err}')
-
+                        logger.error(f'Failed to close partial fill: {cancel_err}')
                 return
-
-            # Use the actual fill price, not the stale signal price
-            signal['entry'] = float(fill_price)
 
             entry_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.position_manager.active_positions[symbol] = {
@@ -227,9 +308,7 @@ class OrderManager:
             }
             self.position_manager.add_position(symbol, signal, shares, entry_time)
 
-            logger.info(
-                f'FILLED {signal["type"]} {symbol}: {shares} sh @ ${fill_price:.2f}, Stop: ${signal["stop"]:.2f}, Target: ${signal["target"]:.2f}'
-            )
+            logger.info(f'FILLED {signal["type"]} {symbol}: {shares} sh @ ${fill_price:.2f}, Stop: ${new_stop:.2f}, Target: ${new_target:.2f}')
             self.alert_manager.alert_trade_entry(signal)
 
         except Exception as e:

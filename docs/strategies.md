@@ -150,7 +150,7 @@ from strategy.ai_analysis.ai_analyzer import AIAnalyzer
 data = StockDataFetcher()
 analyzer = AIAnalyzer(
     stock_data=data,
-    model_type='lstm',      # or 'cnn'
+    model_type='lstm',  # or 'cnn'
     cnn_epochs=20,
     params=params,
 )
@@ -162,7 +162,7 @@ print(analyzer.predict('AAPL'))
 
 # Or with walk-forward validation:
 metrics = analyzer.walk_forward_train(n_splits=5)
-print(f"Avg accuracy: {metrics['avg_accuracy']:.3f}")
+print(f'Avg accuracy: {metrics["avg_accuracy"]:.3f}')
 ```
 
 ### Configuration Knobs
