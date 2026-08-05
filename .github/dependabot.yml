@@ -1,0 +1,15 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # Enable version updates for Python packages via pip
+  - package-ecosystem: "pip"
+    
+    # Location of your requirements.txt (root directory)
+    directory: "/"
+    
+    # Check for new package updates weekly
+    schedule:
+      interval: "weekly"
+      
+    # Assign up to 5 open pull requests at any given time to avoid clutter
+    open-pull-requests-limit: 5
