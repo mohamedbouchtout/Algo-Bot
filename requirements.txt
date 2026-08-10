@@ -11,7 +11,7 @@ ib-insync>=0.9.86
 # Data manipulation and analysis
 pandas>=2.1.0
 numpy>=1.26.0
-torch>=2.10.0
+torch>=2.13.0
 
 # Market calendar (NYSE holidays, trading hours)
 pandas-market-calendars>=4.4.0
