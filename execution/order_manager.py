@@ -206,55 +206,16 @@ class OrderManager:
 
             action = 'BUY' if signal['type'] == 'LONG' else 'SELL'
 
-            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False, transmit=True)
+            # Place parent order as part of an atomic bracket group (do not transmit yet)
+            parent = MarketOrder(action, shares, tif='DAY', outsideRth=False, transmit=False)
             parent_trade = self.ib.placeOrder(contract, parent)
 
-            statuses = ['Filled', 'Cancelled', 'ApiCancelled', 'Inactive']
-            deadline = time.time() + 600
-            while parent_trade.orderStatus.status not in statuses:
-                self.ib.waitOnUpdate(timeout=1)
-                if time.time() > deadline:
-                    break
-
-            filled_qty = parent_trade.orderStatus.filled
-            status = parent_trade.orderStatus.status
-            fill_price = parent_trade.orderStatus.avgFillPrice
-            if status != 'Filled' or fill_price <= 0:
-                logger.warning(f'{symbol} parent order did NOT fill (status={status}). Cancelling and skipping persistence.')
-                try:
-                    self.ib.cancelOrder(parent_trade.order)
-                except Exception as cancel_err:
-                    logger.error(f'Failed to cancel order: {cancel_err}')
-
-                if filled_qty > 0:
-                    logger.warning(f'{symbol} partial fill of {filled_qty} shares at ${fill_price:.2f}. Closing out.')
-                    try:
-                        close_action = 'SELL' if action == 'BUY' else 'BUY'
-                        close_order = MarketOrder(close_action, filled_qty, tif='DAY', transmit=True)
-                        self.ib.placeOrder(contract, close_order)
-                    except Exception as cancel_err:
-                        logger.error(f'Failed to close partial fill: {cancel_err}')
-
-                return
-
-            # Recalculate stop/target from the actual fill price
-            new_stop, new_target = self._recalculate_bracket_prices(signal, fill_price)
-
-            logger.info(
-                f'{symbol} filled @ ${fill_price:.2f} (signal entry ${signal["entry"]:.2f}). Stop: ${new_stop:.2f}, Target: ${new_target:.2f}'
-            )
-
-            signal['entry'] = float(fill_price)
-            signal['stop'] = new_stop
-            signal['target'] = new_target
-            signal['risk'] = abs(fill_price - new_stop)
-            signal['reward'] = abs(new_target - fill_price)
-
+            fill_stop, fill_target = self._recalculate_bracket_prices(signal, live_price)
             child_action = 'SELL' if action == 'BUY' else 'BUY'
             take_profit = LimitOrder(
                 child_action,
                 shares,
-                new_target,
+                fill_target,
                 tif='GTC',
                 outsideRth=True,
                 parentId=parent_trade.order.orderId,
@@ -263,18 +224,23 @@ class OrderManager:
             stop_loss = StopOrder(
                 child_action,
                 shares,
-                new_stop,
+                fill_stop,
                 tif='GTC',
                 outsideRth=True,
                 parentId=parent_trade.order.orderId,
-                transmit=True,
+                transmit=True,  # transmit the group when placing this child
             )
 
             tp_trade = self.ib.placeOrder(contract, take_profit)
             sl_trade = self.ib.placeOrder(contract, stop_loss)
 
-            deadline = time.time() + 600
-            while tp_trade.orderStatus.status not in statuses or sl_trade.orderStatus.status not in statuses:
+            # States of all three orders
+            terminal_statuses = ['Filled', 'Cancelled', 'ApiCancelled', 'Inactive']
+            accepted_child_states = {'PreSubmitted', 'Submitted', 'Filled'}
+            rejected_child_states = {'ApiCancelled', 'Cancelled', 'Inactive'}
+
+            deadline = time.time() + 300
+            while parent_trade.orderStatus.status not in terminal_statuses:
                 self.ib.waitOnUpdate(timeout=1)
                 if time.time() > deadline:
                     break
@@ -300,6 +266,56 @@ class OrderManager:
                         logger.error(f'Failed to close partial fill: {cancel_err}')
                 return
 
+            child_deadline = time.time() + 5
+            child_ok = False
+            while True:
+                try:
+                    tp_status = tp_trade.orderStatus.status
+                    sl_status = sl_trade.orderStatus.status
+                except Exception:
+                    tp_status = None
+                    sl_status = None
+
+                # If any child was rejected, treat as failure
+                if (tp_status in rejected_child_states) or (sl_status in rejected_child_states):
+                    logger.warning(f'Child order rejected for {symbol}: tp_status={tp_status}, sl_status={sl_status}')
+                    break
+
+                # If both children are in an accepted working state, we're good
+                if (tp_status in accepted_child_states) and (sl_status in accepted_child_states):
+                    child_ok = True
+                    break
+
+                # Timeout waiting for children to become accepted
+                if time.time() > child_deadline:
+                    logger.warning(f'Children did not reach working states in time for {symbol}: tp={tp_status}, sl={sl_status}')
+                    break
+                self.ib.waitOnUpdate(timeout=0.5)
+
+            if not child_ok:
+                # Cancel any remaining orders and flatten the filled parent position
+                logger.warning(f'Cancelling group and flattening position for {symbol} due to child order failure.')
+                for trade in [tp_trade, sl_trade, parent_trade]:
+                    try:
+                        self.ib.cancelOrder(trade.order)
+                    except Exception as cancel_err:
+                        logger.debug(f'Failed to cancel during cleanup: {cancel_err}')
+
+                if filled_qty > 0:
+                    try:
+                        close_action = 'SELL' if action == 'BUY' else 'BUY'
+                        close_order = MarketOrder(close_action, filled_qty, tif='DAY', transmit=True)
+                        self.ib.placeOrder(contract, close_order)
+                    except Exception as close_err:
+                        logger.error(f'Failed to flatten filled parent after child failure: {close_err}')
+                return
+
+            signal['entry'] = float(fill_price)
+            signal['stop'] = fill_stop
+            signal['target'] = fill_target
+            signal['risk'] = abs(fill_price - fill_stop)
+            signal['reward'] = abs(fill_target - fill_price)
+
             entry_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.position_manager.active_positions[symbol] = {
                 'signal': signal,
@@ -308,7 +324,9 @@ class OrderManager:
             }
             self.position_manager.add_position(symbol, signal, shares, entry_time)
 
-            logger.info(f'FILLED {signal["type"]} {symbol}: {shares} sh @ ${fill_price:.2f}, Stop: ${new_stop:.2f}, Target: ${new_target:.2f}')
+            logger.info(
+                f'FILLED {signal["type"]} {symbol}: {shares} sh @ ${fill_price:.2f}, Stop: ${signal["stop"]:.2f}, Target: ${signal["target"]:.2f}'
+            )
             self.alert_manager.alert_trade_entry(signal)
 
         except Exception as e:
