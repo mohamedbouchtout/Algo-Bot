@@ -51,7 +51,6 @@ class OrderManager:
                         continue
 
                     # Get historical data
-                    logger.info(f'Testing {ticker}...')
                     df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['lookback_days'])
 
                     if df is None or len(df) < self.params['strategy_retest_200ma']['ma_period']:
@@ -95,8 +94,6 @@ class OrderManager:
                         self.execute_signal(signal)  # Execute immediately for each signal
                         logger.info('Waiting 1 minute after executing signal...')
                         self.ib.sleep(60)  # Small delay to avoid rate limiting
-                    else:
-                        logger.info(f'No signal found for {ticker}')
 
     def execute_signal(self, signal: dict):
         """Execute trading signals"""
