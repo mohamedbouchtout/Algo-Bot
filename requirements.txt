@@ -55,7 +55,7 @@ seaborn>=0.13.0
 # -------------------------------
 # Optional: Notifications
 # -------------------------------
-python-dotenv>=1.0.0
+python-dotenv>=1.2.2
 
 # -------------------------------
 # Development & Testing
