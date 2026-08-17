@@ -40,7 +40,7 @@ yfinance>=1.3.0
 tqdm>=4.70.0
 # Plotting utilities
 matplotlib>=3.11.1
-seaborn>=0.13.0
+seaborn>=0.13.2
 
 # -------------------------------
 # Legacy RBM Dependencies (optional, only needed for ai_modules/rbm/)
