@@ -64,4 +64,4 @@ nox>=2024.4.15
 pytest>=8.3.0
 pytest-cov>=7.1.0
 ruff>=0.16.2
-mypy>=1.14.0
+mypy>=2.3.0
