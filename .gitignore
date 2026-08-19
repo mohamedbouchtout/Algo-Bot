@@ -4,6 +4,7 @@ data/stock_list.txt
 data/bot_logs/*
 data/test_logs/*
 data/performance/*
+data/backtest/*
 results/logs/*
 results/models/*
 results/past_machines.csv
@@ -19,6 +20,7 @@ ai_modules/rbm/results/temp_1_3x3_BAS_not_annealed.csv
 !data/bot_logs/.gitkeep
 !data/test_logs/.gitkeep
 !data/performance/.gitkeep
+!data/backtest/.gitkeep
 
 # Python
 __pycache__/
