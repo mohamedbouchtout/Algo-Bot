@@ -7,8 +7,10 @@ import logging
 import pandas as pd
 import yfinance as yf
 
-# Setup logging
-logger = logging.getLogger()
+# Setup logging. Named rather than root so a caller that drives the risk
+# checks in a tight loop (the backtest) can quiet the per-rejection warnings
+# without silencing everything else. Records still propagate to root handlers.
+logger = logging.getLogger(__name__)
 
 
 class RiskManager:
@@ -59,14 +61,23 @@ class RiskManager:
         trade_cost = shares * entry_price
         return trade_cost <= available_cash
 
-    def get_stop_loss_pct(self, df: pd.DataFrame) -> float:
-        # Fetch the VIX ticker object
+    def get_stop_loss_pct(self, df: pd.DataFrame, vix: float | None = None) -> float:
+        """Volatility-scaled stop distance as a fraction of price.
+
+        `vix` lets a caller supply the VIX level to size against instead of the
+        live quote. Live trading leaves it None and fetches the current value;
+        the backtest passes the VIX close of the simulated day so historical
+        signals are not sized against today's volatility.
+        """
         vix_today = 20.0
-        try:
-            vix_ticker = yf.Ticker('^VIX')
-            vix_today = vix_ticker.fast_info['lastPrice']
-        except Exception as e:
-            logger.warning(f'Failed to fetch VIX data, defaulting to 20.0: {e}')
+        if vix is not None and vix == vix and vix > 0:
+            vix_today = float(vix)
+        else:
+            try:
+                vix_ticker = yf.Ticker('^VIX')
+                vix_today = vix_ticker.fast_info['lastPrice']
+            except Exception as e:
+                logger.warning(f'Failed to fetch VIX data, defaulting to 20.0: {e}')
 
         # Calculate the daily range percentage
         close = df['close'].astype(float)
