@@ -249,8 +249,12 @@ class AIAnalyzer:
             'probs': {self.CLASS_NAMES[i]: float(p) for i, p in enumerate(probs[0])},
         }
 
-    def construct_signal(self, df: pd.DataFrame, params, class_type: str, confidence: float) -> dict | None:
-        """Construct a trading signal dict based on the most recent prediction."""
+    def construct_signal(self, df: pd.DataFrame, params, class_type: str, confidence: float, vix: float | None = None) -> dict | None:
+        """Construct a trading signal dict based on the most recent prediction.
+
+        `vix` is forwarded to the risk manager so a backtest can size the stop
+        against the volatility of the simulated day rather than the live quote.
+        """
         entry_price = df['close'].iloc[-1]
         symbol = df['symbol'].iloc[0]
         target_price = 0
@@ -258,7 +262,7 @@ class AIAnalyzer:
         risk = 0
 
         risk_manager = RiskManager(params)
-        sl = risk_manager.get_stop_loss_pct(df)
+        sl = risk_manager.get_stop_loss_pct(df, vix=vix)
 
         if class_type == 'LONG':
             stop_loss = df['close'].iloc[-1] * (1 - sl)

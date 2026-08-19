@@ -162,7 +162,12 @@ class FeatureBuilder:
 
         T = len(features)
         last_start = T - self.window_size - (self.forward_horizon if include_labels else 0)
-        starts = np.arange(0, last_start)
+        # last_start is itself a valid start: a window beginning there ends on
+        # index last_start + window_size - 1, which still leaves forward_horizon
+        # bars ahead when labelling. Excluding it silently dropped the most
+        # recent sample, so live predictions were made on a window that ended
+        # one bar before the latest close.
+        starts = np.arange(0, last_start + 1)
 
         if bits is not None:
             rbm_x = np.stack([bits[s : s + self.window_size].reshape(-1) for s in starts]).astype(np.uint8)

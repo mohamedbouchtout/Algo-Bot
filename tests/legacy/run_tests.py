@@ -65,21 +65,29 @@ class RunTests:
 
     def run(self):
         """Runs all the test classes"""
-        if not self.connection_manager.connect():
-            self.logger.error('Failed to connect. Exiting.')
-            return
-
+        # The AI backtest is entirely offline (yfinance bars, no orders), so it
+        # runs before the gateway check instead of being blocked by it.
         try:
-            # AI backtest test class
             backtest = TestAIBacktest(
                 ib=self.ib,
-                config={},
+                config=self.config,
                 params=self.params,
                 stock_data_fetcher=self.stock_data_fetcher,
                 categorized_stocks=self.stock_fetcher.categorized_stocks,
+                # The full S&P/NASDAQ universe is several hundred names and
+                # takes hours to walk; cap it for a routine run.
+                max_tickers_per_sector=5,
             )
             backtest.run()
+        except Exception as e:
+            self.logger.error(f'AI backtest failed: {e}')
 
+        if not self.connection_manager.connect():
+            self.logger.error('Failed to connect. Skipping the IB-dependent tests.')
+            return
+
+        try:
+            pass
             # AI analysis test class
             # test_ai_analysis = TestAIanalysis(self.ib, self.config, self.params, self.stock_data_fetcher, self.stock_fetcher, self.connection_manager)
             # test_ai_analysis.train_modules()
