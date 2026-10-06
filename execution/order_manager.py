@@ -12,6 +12,7 @@ from ib_insync import LimitOrder, MarketOrder, Stock, StopOrder
 from data_fetch.historical_data import StockDataFetcher
 from execution.position_manager import PositionManager
 from execution.risk_manager import RiskManager
+from execution.sharia_compliance import is_sharia_compliant
 from strategy.ai_analysis.ai_analyzer import AIAnalyzer
 from strategy.retest_200ma.indicators import TrendIndicator
 from utils.alerts import AlertManager
@@ -50,6 +51,12 @@ class OrderManager:
                     if ticker in self.position_manager.active_positions:
                         continue
 
+                    # Skip if Sharia compliance check is enabled and the stock is not compliant
+                    sharia_enabled = self.params.get('sharia_compliance', {}).get('enabled', False)
+                    if sharia_enabled and not is_sharia_compliant(ticker):
+                        logger.info(f'Skipping {ticker} due to Sharia compliance check.')
+                        continue
+
                     # Get historical data
                     df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['lookback_days'])
 
@@ -65,6 +72,10 @@ class OrderManager:
                                 'LONG',
                                 'SHORT',
                             ]:
+                                if sharia_enabled and class_type == 'SHORT':
+                                    logger.info(f'Skipping {ticker} due to Sharia compliance check (short position).')
+                                    continue
+
                                 logger.info(f'AI prediction for {ticker}: {class_type} with confidence {prediction["probs"][class_type]:.2f}')
 
                                 ai_signal = self.ai_analyzers[sector].construct_signal(df, self.params, class_type, prediction['probs'][class_type])
