@@ -161,3 +161,9 @@ The AI pipeline uses an LSTM model by default (switchable to CNN via `model_type
 |-----------|-------------|
 | `scan_interval` | Seconds between full stock scans during market hours |
 | `market_check_interval` | Seconds between market-hours checks when market is closed |
+
+## Sharia screening
+
+Enable the `sharia_compliance` section in `config/trading_params.json` and supply
+reviewed evidence. See [Sharia equity screening](sharia-screening.md) for the policy,
+data schema, result statuses and examples. Yahoo alone cannot establish a pass.
