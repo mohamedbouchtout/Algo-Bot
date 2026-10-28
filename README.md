@@ -69,6 +69,7 @@ Algo-Bot/
 | [Installation](docs/installation.md) | Prerequisites, setup, IB configuration, Docker |
 | [Configuration](docs/configuration.md) | Config files, trading parameters, environment variables |
 | [Strategies](docs/strategies.md) | 200 MA strategy details and AI analysis pipeline |
+| [Sharia Screening](docs/sharia-screening.md) | Evidence-based equity screening and configuration |
 | [Risk Management](docs/risk-management.md) | Position sizing, safeguards, going live |
 | [Deployment](docs/deployment.md) | Running locally, on a server, or in Docker |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors and how to fix them |

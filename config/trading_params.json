@@ -34,6 +34,9 @@
         "market_check_interval": 900
     },
     "sharia_compliance": {
-        "enabled": false
+        "enabled": false,
+        "methodology": "ftse-yasaar-numerical-v4.6-2026-02",
+        "evidence_file": null,
+        "max_age_days": 450
     }
 }

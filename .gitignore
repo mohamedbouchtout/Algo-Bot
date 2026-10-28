@@ -43,3 +43,9 @@ TradingBot/
 # OS
 .DS_Store
 Thumbs.db
+# Locally reviewed Sharia research evidence
+data/sharia_evidence.json
+
+# Validation artifacts
+.mypy_cache/
+.coverage

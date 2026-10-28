@@ -12,7 +12,7 @@ from ib_insync import LimitOrder, MarketOrder, Stock, StopOrder
 from data_fetch.historical_data import StockDataFetcher
 from execution.position_manager import PositionManager
 from execution.risk_manager import RiskManager
-from execution.sharia_compliance import is_sharia_compliant
+from execution.sharia_compliance import screener_from_config
 from strategy.ai_analysis.ai_analyzer import AIAnalyzer
 from strategy.retest_200ma.indicators import TrendIndicator
 from utils.alerts import AlertManager
@@ -39,6 +39,8 @@ class OrderManager:
         self.ai_analyzers = ai_analyzers
         self.config = config
         self.params = params
+        sharia_config = params.get('sharia_compliance', {})
+        self.sharia_screener = screener_from_config(sharia_config) if sharia_config.get('enabled', False) else None
 
     def scan_stocks(self, categorized_stocks: dict[str, dict[str, list]]):
         """Scan all stocks for trading signals"""
@@ -51,11 +53,7 @@ class OrderManager:
                     if ticker in self.position_manager.active_positions:
                         continue
 
-                    # Skip if Sharia compliance check is enabled and the stock is not compliant
-                    sharia_enabled = self.params.get('sharia_compliance', {}).get('enabled', False)
-                    if sharia_enabled and not is_sharia_compliant(ticker):
-                        logger.info(f'Skipping {ticker} due to Sharia compliance check.')
-                        continue
+                    sharia_enabled = self.sharia_screener is not None
 
                     # Get historical data
                     df = self.stock_data.get_historical_data(ticker, self.params['strategy_retest_200ma']['lookback_days'])
@@ -106,8 +104,23 @@ class OrderManager:
                         logger.info('Waiting 1 minute after executing signal...')
                         self.ib.sleep(60)  # Small delay to avoid rate limiting
 
+    def _entry_allowed(self, signal: dict) -> bool:
+        """Guard every new entry, including direct calls and both strategies."""
+        if self.sharia_screener is None:
+            return True
+        if signal.get('type') != 'LONG':
+            logger.info('Sharia screen blocks non-long entry for %s', signal.get('symbol'))
+            return False
+        result = self.sharia_screener.check(signal.get('symbol', ''))
+        if not result.compliant:
+            logger.info('Sharia screen blocks %s: %s %s', signal.get('symbol'), result.status.value, result.reasons)
+        return result.compliant
+
     def execute_signal(self, signal: dict):
         """Execute trading signals"""
+        if not self._entry_allowed(signal):
+            return
+
         # Get account info to determine position sizing
         account_summary = self.ib.accountSummary()
         net_liq = 0.0
@@ -184,6 +197,9 @@ class OrderManager:
     def place_order(self, signal: dict, shares: int):
         """Check the live price against the signal entry, then place a market
         order and attach bracket children using the actual fill price."""
+        if not self._entry_allowed(signal):
+            return
+
         try:
             symbol = signal['symbol']
             contract = Stock(symbol, 'SMART', 'USD')
