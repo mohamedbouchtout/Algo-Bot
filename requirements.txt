@@ -29,7 +29,7 @@ requests>=2.31.0
 # -------------------------------
 # Utilities
 # -------------------------------
-python-dateutil>=2.8.2
+python-dateutil>=3.0.0
 # Stock data
 yfinance>=1.7.0
 
