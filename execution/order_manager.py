@@ -101,8 +101,7 @@ class OrderManager:
                         )
 
                         self.execute_signal(signal)  # Execute immediately for each signal
-                        logger.info('Waiting 1 minute after executing signal...')
-                        self.ib.sleep(60)  # Small delay to avoid rate limiting
+                        self.ib.sleep(1)  # Small delay to avoid rate limiting
 
     def _entry_allowed(self, signal: dict) -> bool:
         """Guard every new entry, including direct calls and both strategies."""
