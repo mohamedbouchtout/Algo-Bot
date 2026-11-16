@@ -192,3 +192,32 @@ def test_disabled_configuration_never_constructs_screener(order_manager_class):
         manager = order_manager_class(Mock(), Mock(), Mock(), Mock(), {}, CONFIG, params)
     assert manager.sharia_screener is None
     factory.assert_not_called()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize('entry', ['execute_signal', 'place_order'])
+@pytest.mark.parametrize('eligible', [True, False])
+def test_etf_config_controls_broker_entry(order_manager_class, entry, eligible):
+    from tests.unit.test_etf_holdings import feed, response
+
+    params = deepcopy(PARAMS)
+    params['sharia_compliance'] = {'enabled': True, 'mode': 'etf_holdings'}
+    ib = Mock()
+    ib.accountSummary.return_value = [Mock(tag='NetLiquidation', value='100000')]
+    ib.portfolio.return_value = []
+    ib.reqTickers.return_value = [Mock(marketPrice=Mock(return_value=None))]
+    manager = order_manager_class(ib, Mock(), Mock(active_positions={}), Mock(), {}, CONFIG, params)
+    with patch(
+        'execution.etf_holdings.requests.get',
+        side_effect=[
+            response(feed('HLAL', ['TEST'] if eligible else [], day=date.today())),
+            response(feed('SPUS', day=date.today())),
+        ],
+    ):
+        if entry == 'execute_signal':
+            manager.execute_signal(signal())
+        else:
+            manager.place_order(signal(), 10)
+    assert ib.qualifyContracts.call_count == int(eligible)
+    if not eligible:
+        assert ib.mock_calls == []

@@ -219,7 +219,15 @@ class ShariaScreener:
         return result
 
 
-def screener_from_config(config: dict) -> ShariaScreener:
+def screener_from_config(config: dict):
+    # Legacy explicit financial configurations remain supported.
+    mode = config.get('mode', 'financial' if config.get('methodology') or config.get('evidence_file') else 'etf_holdings')
+    if mode == 'etf_holdings':
+        from execution.etf_holdings import ETFHoldingsScreener
+
+        return ETFHoldingsScreener(max_age_days=config.get('holdings_max_age_days', 7))
+    if mode != 'financial':
+        raise ValueError('Unsupported Sharia screening mode')
     if config.get('methodology', POLICY) != POLICY:
         raise ValueError('Unsupported Sharia screening methodology')
     path = config.get('evidence_file')

@@ -1,4 +1,55 @@
-﻿# Sharia equity screening
+# Automatic Sharia ETF holdings filter
+
+The default `etf_holdings` mode downloads the official HLAL and SPUS stock
+holdings automatically. A stock is eligible when it appears in **either** fresh
+list. Users do not need an API key, subscription, or financial evidence file.
+Yahoo remains available for market data; its financial statements are not used
+for this eligibility decision.
+
+```json
+"sharia_compliance": {
+    "enabled": true,
+    "mode": "etf_holdings",
+    "holdings_max_age_days": 7
+}
+```
+
+Sources:
+- HLAL: the public Google Sheet linked from [Wahed's fund page](https://www.wahed.com/hlal), exported as CSV.
+- SPUS: the sponsor's [daily holdings CSV](https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPUS.csv).
+
+Each source refreshes on the first entry check of each calendar day, including
+on startup. Successful downloads are cached in memory for the day. Failed feeds
+retry after five minutes; an unsuccessful refresh never reuses yesterday's cache.
+Only the newest dated snapshot is used, including when the file contains older
+holdings. Published dates must be no more than seven calendar days old (covering
+weekends/holidays); `holdings_max_age_days` can tighten this to 1–7 days.
+
+Cash, money-market entries, zero-value remnants and non-stock identifiers are
+excluded. Share-class separators (`BRK.B`, `BRK-B`, `BRK B`) are normalized.
+A malformed, empty, implausibly small, stale or future-dated feed cannot approve
+entries. Membership in one valid feed is enough if the other is unavailable.
+Absence from both available lists blocks entry; when a feed is unavailable and
+there is no match, the result is `insufficient_data` and also blocks entry.
+Logs identify the matching fund, URL, published holdings date and policy
+`hlal-spus-holdings-union-v1`.
+
+This is an ETF-membership proxy using the union of two funds with different
+screening methodologies, not an independent financial compliance assessment.
+`compliant` means eligible under this selected policy; `non_compliant` means
+absent from these lists, not a religious judgment about an unlisted company.
+Holdings can lag screening changes. This does not reproduce FTSE Yasaar's
+numerical policy. Shorts remain blocked, while exits and protective orders remain
+available. This filter does not assess account interest, margin or purification.
+
+## Optional legacy financial mode
+
+The prior reviewed-evidence screen remains available by explicitly setting
+`"mode": "financial"`. Its policy and requirements are documented below.
+Existing configurations naming the old methodology or an evidence file without
+a mode retain that financial behavior. The shipped configuration selects ETF mode.
+
+## Financial screening details
 
 Enable `sharia_compliance.enabled` in `config/trading_params.json`. Every new
 entry is screened at sizing and again before broker access. Only a `LONG` with a
@@ -81,6 +132,7 @@ Set configuration as follows (paths resolve from the bot's working directory):
 ```json
 "sharia_compliance": {
     "enabled": true,
+    "mode": "financial",
     "methodology": "ftse-yasaar-numerical-v4.6-2026-02",
     "evidence_file": "data/sharia_evidence.json",
     "max_age_days": 450
