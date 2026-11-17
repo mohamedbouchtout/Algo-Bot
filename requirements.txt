@@ -37,7 +37,7 @@ yfinance>=1.7.0
 # AI Analysis Pipeline (LSTM + CNN)
 # -------------------------------
 # Progress bars during training
-tqdm>=4.70.0
+tqdm>=4.70.1
 # Plotting utilities
 matplotlib>=3.11.2
 seaborn>=0.13.2
